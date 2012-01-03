@@ -1,0 +1,132 @@
+\chapter{Egyebek}%
+\label{cha:others}
+
+%E fejezetben további, a programozási környezet tárgyhoz szigorúan nem tartozó
+%programok és példák szerepelnek.
+
+
+
+\section{Az \texttt{xargs} parancs}
+
+Az \texttt{xargs} tekinthető speciális szűrőnek, ugyanis a szabványos bemenetére
+-- soronként -- érkező fájlneveket a paraméterében megadott programnak adja
+át. Ha nincs megadva, akkor ez az \texttt{echo}, amely a bash beépített parancsa
+is és egy külső program is. Mindkét változat elfogadja a \texttt{-n} opciót,
+amely nem ír újsor karaktert, valamint a \texttt{-e} opciót is, amellyel az
+escape szekvenciákat értelmezi (például: \texttt{echo -e 'a\t'}).
+
+Az \texttt{xargs} egy hasznos opciója a \texttt{-o}, melyet általában nem
+használunk, ám amikor interaktív programot adunk meg paraméterként, akkor
+elengedhetetlen, ugyanis e program bemenete a \texttt{/dev/tty} lesz, vagyis
+amin éppen dolgozunk.
+
+Egy másik opciója, amelyre szükségünk lehet, a \texttt{-t}, amely a
+hibakimenetre írja ki, mit fog most lefuttatni.
+
+
+\begin{VerbExample}
+echo almafa | xargs rm            # Az almafa fájl törlése
+\end{VerbExample}
+
+
+
+
+\section{A \texttt{find} parancs}
+
+A \texttt{find} paranccsal kereshetünk egy adott könyvtárstruktúrában.
+
+\begin{VerbExample}
+find könyvtár feltételek
+find feltételek            # csak GNU find
+\end{VerbExample}
+
+A \texttt{find} alapesetben az aktuális könyvtár alatt keres, ám megadható az
+is, hogy ezt melyik alkönyvtárban tegye. Bár Linuxon működik mindkét forma,
+régebbi Unixokon, valamint a mai \textsc{bsd} rendszereken a könyvtár nem
+hagyható el, mindig meg kell adni.
+
+A legfontosabb opciói:
+
+\begin{tabular}{ll}\toprule
+Opció  & jelentés\\\midrule
+-name X & Az ``X'' nevű könyvtárbejegyzéseket keresi\\
+-iname X & mint az -iname, csak kis- és nagybetűk azonosak\\
+-tpye X & Adott típusú könyvtárbejegyzés\\
+-maxdepth n & Legfeljebb n mélységben keres\\
+-exec program [params] ; & Adott program futtatása\\%
+\bottomrule
+\end{tabular}
+
+További opciók is léteznek, ezek közül néhányat a példák során vizsgálunk meg.
+
+A \texttt{/etc} környvtárban keressük az összes ``pas'' karakterrekkel kezdődő,
+``d''-re végződő fájlt vagy könyvárat, a második példűban pedig már csak a
+fájlokat.
+
+\begin{VerbExample}
+panther@Artanis ~ $ find  /etc/ -name 'pa*d'
+/etc/pam.d
+/etc/pam.d/passwd
+/etc/passwd
+/etc/paths.d
+panther@Artanis ~ $ find  /etc/ -name 'pa*d' -type f
+/etc/pam.d/passwd
+/etc/passwd
+\end{VerbExample}
+
+A \texttt{-name}, továbbá a \texttt{-iname} argumentuma is egy ``glob-pattern''
+elnevezésű kifejezés, amelyhez hasonlót használ a shell is. Itt minden karakter
+önmagát jelenti, kivéve a kérdőjel, amely pontosan egy tetszőleges karaktert
+jelöl, valamint a csillag, amely legalább nulla tesztőleges karaktert. 
+
+A \texttt{-type} argumentuma leggyakrabban az \texttt{f} (reguláris fájl), és a
+\texttt{d} (könyvtár), azonban további lehetőségek is vannak, blokkos
+eszközfájlra a \texttt{b}, karakteresre a \texttt{c}, szimbolikus linkre pedig a
+\texttt{l} (kis L, nem pedig egy). Még gyakran találkozhatunk socket fájllal
+(\texttt{s} a típus jele), és előfordulhat FIFO is (\texttt{p}). 
+
+Fájlok törlésére is több lehetőségünk van, az egyik az \texttt{rm} parancs
+meghívása, a másik pedig egy \texttt{find} opció, a
+\texttt{-delete}. Jellegzetes felhasználása átmeneti fájlok törlése:
+
+\begin{VerbExampleNum}
+find . -type f -iname '*.tmp' -exec rm {} \;
+find . -type f -iname '*.tmp' -exec rm '{}' \;
+find . -type f -iname '*.tmp' -exec rm '{}' '+'
+find -d . -type f -iname '*.tmp' -exec rm '{}' \;
+find . -type f -iname '*.tmp' -delete
+find . -type f -iname '*.tmp' | xargs rm
+\end{VerbExampleNum}
+
+Ezek nagyon hasonló parancsok, az első kettő pontosan ugyanaz, az aposztróf
+használata nem kötelező. Viszont ez hibalehetőség is, ugyanis ha a zárójelpár
+nem üresen áll, a bash által értelmezhető is lehet: \texttt{\{a,b\}} kifejtés
+után \texttt{a b}, és ezek teszőlegesen egymásba ágyazhatók (két vagy több
+paramétert esetenként könnyebb így megadni).
+
+A kapcsoszárójelpár helyére a \texttt{find} behelyettesíti a megtalált
+könyvtárbejegyzést, és pontosan egyet az első két esetben. A futtatandó parancs
+végét egy -- a \texttt{find}-nak átadott -- pontosvessző jelzi. A harmadik
+változatnál az \texttt{-exec} utolsó argumentuma viszont egy pluszjel, amely
+hatására a lehető legtöbb argumentumot próbálja meg átadni a find az adott
+programnak (\texttt{-exec} első argumentuma).
+
+A negyedik változatnál a \texttt{find} a \texttt{-d} opció hatására mélységi
+bejárást végez az adott könyvárstruktúrán, az ötödik pontosan ugyanezt teszi,
+csupán nem kell külső programot meghívni a törlésre, és a mélységi bejárás
+automatikus.
+
+A hatodik esetben a \texttt{find} parancs a szabványos kimenetre írja a
+megtalált fájlokat, melyet az \texttt{xargs} feldolgoz és az összeset egyszerre
+átadja az \texttt{rm}-nek. Hatása majdnem ugyanaz, mint a harmadik változaté,
+viszont ha túl sok a megtalált állomány, akkor a bash nem fogja tudni
+lefuttatni.
+
+
+
+
+% Local Variables:
+% fill-column: 80
+% mode: latex
+% End:
+

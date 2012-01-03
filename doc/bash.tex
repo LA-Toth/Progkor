@@ -1,0 +1,613 @@
+\chapter{A parancsértelmező használata}%
+\label{cha:shell}
+
+
+A parancsértelmező a Unixos időszakból származik, azóta számtalan eltérő tudású
+verziója jelent meg. Erre példa a \texttt{tcsh}, \texttt{ksh}, \texttt{bash},
+\texttt{sh}. Ma ez utóbbin egy \textsc{posix} szabványban \cite{posix:shell}
+rögzített tulajndoságokkal rendelkező változatot értjük, azonban előfordulhat,
+hogy többet tud, például akkor, ha csupán egy symlink a \texttt{bash}-re.
+
+A jegyzet hátralévő része a bash-ről szól. A bash a Bourne Again SHell
+rövidítése.
+
+A Linux rendszereken a bash az alapértelmezett parancsértelmező, ezért fontos,
+hogy tisztában legyünk a működésével. E fejezet nagy vonalakban vázolja a
+lehetőségeket, a későbbiekben pedig kitérünk az egyes részletekre,
+kategóriánként csoportosítva. Mivel a bash önmagában csupán korlátozottan
+használható, ezért kezdettől fogva fontos szerep jut a rendszer további,
+bash-ből használható programjainak is.
+
+\section{A bash alapjai}
+
+Amikor karakteres felületen vagy éppen ssh-n keresztül jelentkezünk, akkor a
+bash indul el, és várja, hogy parancsokat gépeljünk be számára. Bár a grafikus
+felületen nem találkozunk vele, egy terminált megnyitva (amilyen az
+\texttt{xterm}, vagy a \texttt{Konsole}) szintén e parancsértelmezőt indítjuk
+el.
+
+Ha már fut, akkor többféleképpen léphetünk ki belőle. az egyik lehetőség a
+Ctrl-D leütése, amellyel jelezzük, hogy nem kívánunk további parancsokat kiadni,
+vagyis a bemenete végetért. A másik az \texttt{exit} parancs -- utasítás --
+begépelése, amely után enter-t ütve a bash befejezei futását. Ha nem indítottunk
+el másik programot, mely lehet akár egy másik bash példány is, akkor a rendszer
+kiléptet minket az ssh esetén, vagy pedig bezáródik a terminál ablaka.
+
+A Ctrl-D a legtöbb program számára azt jelenti, hogy véget ért a bemenete,
+vagyis a billentyűzetről nem fog újabb sorokat kapni, ám ezzel a bash esetén a
+rendszerből is ki is lehet jelentkezni, ami lehet nem szándékos is, ezért a
+\aref{cha:env-vars}.\ fejezetben látni fogjuk, hogyan lehet ezt elkerülni.
+
+A futó parancsértelmező vár valamilyen bemenetre, amit értelmezni tud, majd
+pedig lefuttatni, a parancs végét általában az enter billentyű leütésével
+jelezhetjük -- ám van olyan parancs is, amely a későbbi sorokban folytatódik.
+A hibásan beírt parancsot könnyen
+javíthatjuk, mivel elegendő a kurzormozgató billentyűkkel balra-jobbra
+navigálni, és beszúrni az új, már jó kódot, a régit pedig törölni. A korábban
+kiadott parancsok is elérhetőek a fel-le gombokkal lépegetve közöttük. Sőt, az
+eddig kiadott -- és megjegyzett -- parancsokat meg is tekinthetjük a
+\texttt{history} parancs kiadásával. Egy korábban kiadott parancsot úgy is
+megtalálhatunk, ha a C-r (control és r) billentyűk leütése után beírjuk a
+parancs egy részletét.
+
+\section{Parancsok általában}
+
+A legtöbb parancs a következő formában működik:
+
+\begin{VerbExample}
+program opciók paraméterek
+\end{VerbExample}
+
+Ebből egyedül a \texttt{program} kötelező, a többi nem. Az opciók mínuszjellel
+kezdődnek és egy karakter hosszúak, melyekangol ábécé kis- és nagybetűi, valamint
+számjegyek lehetnek. Ez a régi Unixokon elterjedt verzió, ahol még fontos volt,
+hogy minden minél rövidebben leírható -- begépelhető -- legyen. Ma már sokszor
+az olvashatóság fontosabb, illetve egyes opcióknak nincs is egy karakteres
+változata, ezek angol elnevezése ``long options'', hoyyszú opciók. Mindegyik két
+darab mínuszjellel kezdődik, majd pedig legalább egy szó áll ott, több szó
+esetén köztük mínuszjel áll. 
+
+Erre példa a \texttt{wc} szűrő, amelynek az itt látható opciója a leghosszabb
+beolvasott sor hosszát adja meg:
+
+\begin{VerbExample}
+wc -L
+wc --max-line-length
+\end{VerbExample} 
+
+Egyes programok megengedik azt, hogy az opciók a paraméterek után legyenek.
+
+Akár megengedik, akár nem, fontos, hogy meg lehessen őket különböztetni
+egymástól, ezért a mínuszjellel kezdődő paraméter (például fájlnév) esetén e
+határt valahogy jelölni kell.
+
+Fájlnév esetén ez még egyszerű, hiszen a probléma megkerülhető az aktuális
+könyvtár explicit használatával: ``./-file'', a gond akkor van, ha a paraméter
+nem fájlnév. Erre egy speciális opció van, a mínuszjel: ``--''. Például az
+összes fájl vagy könyvtár tulajdonságainak listázása -- lásd később:
+
+\begin{VerbExample}
+ ls -l -- *
+\end{VerbExample}
+
+Ez esetben az opció önállóan áll, ám a legtöbb opció összevonható, például:
+
+\begin{VerbExample}
+ls -l -A -R
+ls -lAR
+head -q -n 8
+head -q -n8
+head -qn8
+\end{VerbExample} 
+
+\subsection{Segítség a használható parancsokhoz}
+
+Az összes programot nem lehet és nem is szükséges fejben tartanunk, ugyanis
+számos lehetőséget nyújt egy Linux rendszer az információk megszerzésére. Ha
+ismerjük a programot, akkor annak leírását, kézikönyvlapját a \texttt{man}
+paranccsal kaphatjuk meg, vagy pedig az \texttt{info} paranccsal. Ha nem
+ismerjük a parancs nevét, de tudjuk, mit csinál, akkor az \texttt{apropos}
+paranccsal találhatjuk meg (ez egyébként ugyanaz, mint a \texttt{man
+  -k}). Mindegyik esetben a keresendő program nevét paraméterben kell megadni,
+esetleg a fejezetet is, ugyanis a kézikönyvlapok fejezetekbe tartoznak, és több
+fejezetben is lehet azonos parancs.
+
+A következőkben a kiadható parancsokra láthatunk példákat, mindegyiket egy-egy
+rövid leírás követi a bash által értelmezett megjegyzés formájában, amely a
+kereszt (hash mark, '\#') jeltől kezdve a sor végéig tart.
+
+\begin{Verbatim}[xleftmargin=10mm]
+man bash       # a bash kézikönyvlapja - nagyon hosszú
+apropos copy   # mivel is tudunk másolni?
+info coreutils # néhány alapvető parancs leírása
+man 5 fstab    # a  /etc/fstab leírása az 5. fejezetben
+\end{Verbatim}
+
+
+
+\section{Ismerkedés a rendszerrel}
+
+Az előző fejezetben már láthattuk, hogy hogyan néz ki a Linux fájlrendszere,
+most megismerkedünk az ezen dolgozó parancsokkal, valamint néhány további
+hasznos eszközzel.
+
+\subsection{Fájlok, könyvtárak}
+
+Az adataink egyetlen könyvtárban és annak alkönyvtáraiban találhatóak, ezt
+nevezzük home könyvtárnak (home directory). Néhány rendszeren például a
+honlapokat mégis egy másik helyen tároljuk, így valójában több helyen is
+lehetnek a fájljaink, de nem tekinthető szokásosnak.
+
+E könyvtárba a \texttt{cd} paranccsal léphetünk, egy másikba pedig hasonlóan,
+csak meg is kell adnunk a könyvtár nevét:
+\begin{VerbExample}[commandchars=\\\{\}]
+cd \textit{könyvtárnév}
+\end{VerbExample}
+Azt, hogy hol állunk, a \texttt{pwd} paranccsal kérdezhetjük le, például:
+
+\begin{VerbExample}
+~ > pwd
+/home/panther
+\end{VerbExample}
+
+A parancsot a \emph{prompt} után írhatjuk be, amelynek a végét általában egy
+dollárjel (\$) szokta jelezni. A promptot néhol készenléti jelnek is nevezik. A
+bash esetén szabadon módosítható a tartalma, ezért előfordulhat, hogy az
+aktuális könyvtár nevét is tartalmazza, például Gentoo linuxok esetén a home
+könyvtár nevét a `~' karakter (tilde, hullámvonal) helyettesíti:
+
+\begin{VerbExample}
+panther@tassadar ~/git/panther-elte/progkor/doc $ cd
+panther@tassadar ~ $
+\end{VerbExample}
+
+Könyvtár létrehozására illetve törlésére az \texttt{mkdir} és \texttt{rmdir}
+parancsok szolgálnak, mindegyik egy vagy több könyvtár nevét várja. Fájlok
+törlésére pedig az \texttt{rm} parancs való:
+
+\begin{VerbExample}
+mkdir a a/b almafa  # ezen könyvtárak létrehozása
+rmdir almafa        # egyből töröljük is
+rm -r a             # az rm könyvtárat is töröl
+\end{VerbExample}
+
+A példákban az \texttt{rmdir} csupán üres alkönyvtárat tud törölni, ámde az
+\texttt{a} könyvtár nem volt az, így kényelmesebb volt az \texttt{rm} parancsot
+használni, ami az \texttt{a} tartalmát is törli a \texttt{-r} opció hatására. Ez
+utóbbi jelentése rekurzív törlés: előbb a fájlokat, majd pedig az így üressé
+vált könyvtárakat törli.
+
+Fájlokat tipikusan egy \emph{editorral} (kisebb-nagyobb tudású
+``szövegszerkesztő'' programmal) hozunk létre, vagy pedig másolással. Az
+előbbiről \aref{sec:editors}.\ alfejezet foglalkozik. Az utóbbit a \texttt{cp}
+paranccsal tehetjük meg, illetve ha áthelyezni, mozgatni szeretnénk, akkor pedig
+az \texttt{mv} parancsot használhatjuk.
+
+\begin{VerbExampleNum}
+cp a b             # 1 fájl másolása
+cp a b c/          # több fájl másolása
+cp -r könyvtár  b  # könyvtár másolása
+cp -ar könyvtár b  # ... jogok megőrzése
+mv a b             # átnevezés/áthelyezés
+mv -i a b          # interaktív
+\end{VerbExampleNum}
+
+E példákban az opcióknak nagy szerepük van. A \texttt{cp} önmagában csak fájlt
+tud másolni, könyvtárat csupán a \texttt{-r} opcióval együtt a 3.\ példa
+szerint. Ha több fájlt vagy könyvtárat másolunk, akkor az utolsó kötelezően
+könyvtár, ebben lesz az új tartalom. A 4.\ példában a \texttt{-a} opció
+garantálja, hogy a fájlok tulajdonságai sem változnak (tulajdonos, módosítási
+idő és jogosultság). Az \texttt{mv} parancsnak nem szükséges megadnunk a
+\texttt{-r} opciót -- nincs is ilyen --, ettől eltekintve ugyanaz igaz rá, mint
+a \texttt{cp}-re. A 6.\ példában a \texttt{-i} opció hatására az \texttt{mv}
+rákérdez minden egyes fájl esetén, ha a célfájl már létezik, vagyis a véletlen
+felülírástól véd. Ez használható a \texttt{cp} és az \texttt{rm} parancsokkal
+is, utóbbinál a véletlen törlés lehetőségét zárja ki.
+
+
+\subsection{Környezet - más felhasználók}
+
+A Unix rendszereken megszokott, hogy többen is használják egyszerre, tehát ha
+egy szerverre ssh-n keresztül bejelentkezünk, akkor nagy valószínűséggel lesz
+más felhasználó is. Próbaképpen nézzünk is szét:
+
+\begin{VerbExample}
+panther@panda:~$ users
+dojo panther panther sz sz sz
+panther@panda:~$ who
+dojo     pts/1        Jan 27 09:53 (53d82d1e.adsl.enternet.hu)
+sz       pts/3        Jan 27 11:47 (ia8vb9l7ul.adsl.datanet.hu)
+sz       pts/4        Jan 27 11:49 (ia8vb9l7ul.adsl.datanet.hu)
+panther  pts/5        Jan 27 11:51 (valerie.inf.elte.hu)
+sz       pts/6        Jan 27 11:51 (ia8vb9l7ul.adsl.datanet.hu)
+panther  pts/7        Jan 27 11:53 (dsl54008339.pool.t-online.hu)
+panther@panda:~$ w
+ 11:53:25 up 9 days, 19:54,  6 users,  load average: 0.02, 0.01, 0.00
+USER     TTY      FROM              LOGIN@   IDLE   JCPU   PCPU WHAT
+panther@panda:~$ uptime
+ 11:53:28 up 9 days, 19:54,  6 users,  load average: 0.02, 0.01, 0.00
+\end{VerbExample}
+
+Ezen parancsok sokféle információt tartalmaznak, tekintsük sorban. A legelső a
+\texttt{users} volt, amely a bejelentkezett felhasználók neveit írja ki. Ha
+valakinek az azonosítója egynél többször szerepel, akkor ugyanennyiszer
+jelentkezett be. A következő a who, amely a felhasználók azonosítóját, az
+általuk használt terminált (a \texttt{/dev} alatti fájl nevét), a bejelentkezés
+idejét, valamint azon gép nevét listázza, ahonnan bejelentkezett. A \texttt{w}
+első sora az \texttt{uptime} parancs kimenetét tartalmazza, a többi pedig
+további adatokat közöl a bejelentkezett felhasználókról. Ha grsecurity
+\cite{grsecurity}, valamint pax \cite{pax} kiegészítésekkel biztonságosabbá tett
+rendszeren adjuk ki, akkor gyakran üres a lista. Egy otthoni gépen viszont már
+többet láthatunk:
+
+\begin{VerbExample}
+panther@tassadar ~ $ users
+panther panther
+panther@tassadar ~ $ who
+panther  :0           2008-01-27 09:52
+panther  pts/7        2008-01-27 11:59 (artanis.panthernet)
+panther@tassadar ~ $ w
+ 11:59:09 up  2:08,  2 users,  load average: 0,16, 0,14, 0,13
+USER     TTY        LOGIN@   IDLE   JCPU   PCPU WHAT
+panther  :0        09:52   ?xdm?   5:43   0.00s /bin/sh /usr/kde/3.5/bin/startkde
+panther  pts/7     11:59    7.00s  0.16s  0.16s -bash
+panther@tassadar ~ $ uptime
+ 11:59:12 up  2:08,  2 users,  load average: 0.16, 0.14, 0.13
+\end{VerbExample}
+
+A \texttt{:0} azt jelzi, hogy az adott felhasználó grafikus felületen
+jelentkezett be, a nullás azonosítójú képernyőn -- több grafikus felület is
+futhatna egyszerre. A ``LOGIN@'' a bejelentkezési időt adja meg, az ``IDLE'' azt
+az időt, amennyi ideje inaktív. Grafikus felület esetén ilyen nincsen, ám ssh
+esetén már van, ez látszik is a példában, 7 másodperce inaktív a felhasználó --
+csak a példa kedvéért bejelentkeztem egy másik gépről. A JCPU és a PCPU a
+felhasznált processzoridőt adja meg, a WHAT pedig a futtatott
+programot. Természetesen nincsen olyan, hogy \texttt{-bash}, a mínusz jelnek
+jelen esetben speciális jelentése van, méghozzá az, hogy interkatív vagyis
+bejelentkezési shellről van szó, ahova a felhasználó gépelhet.
+
+Az \texttt{uptime} kimenete sokszor érdekesebb, az első része a pontos időt írja
+ki, majd az ``up'' szó után a futási időt, például 2 óra 8 perce megy a gép,
+vagy éppen a panda esetén 9 napja, 19 órája és 54 perce, továbbá 2 illetve 6
+bejelentkezett felhasználó van. A ``load average'' az átlagos terhelés az elmúlt
+egy, öt, valamint 15 percben, vagyis átlagosan hány folyamat (futó program)
+kívánta használni a processzorokat. Amíg ezek az értékek legfeljebb akkorák,
+mint ahány processzor -- pontosabban processzormag -- van a gépben, addig
+nincsen gond, utána viszont már túlterhelt. Ez előfordulhat akkor, ha valamelyik
+program hibásan működik, vagy túl sokan használják a gépet, de lehet
+természetesnek nevezhető állapot is, amikor átmenetileg nagy számításigényű
+feladatot hajt végre valamely program.
+
+Az egyes felhasználókról további információkat is megtudhatunk a finger parancs
+kiadásával:
+
+\begin{VerbExample}
+panther@tassadar ~ $ finger
+Login    Name                   Tty      Idle  Login Time   Office     Office Phone
+panther  Tóth László Attila *:0             Jan 27 09:52
+panther  Tóth László Attila  pts/7      13  Jan 27 11:59 (artanis.panthernet)
+panther@tassadar ~ $ finger -m panther
+Login: panther                          Name: Tóth László Attila
+Directory: /home/panther                Shell: /bin/bash
+On since Sun Jan 27 09:52 (CET) on :0 (messages off)
+On since Sun Jan 27 11:59 (CET) on pts/7 from artanis.panthernet
+   14 minutes 12 seconds idle
+New mail received Wed Jan 23 21:52 2008 (CET)
+     Unread since Sat Jan  5 15:30 2008 (CET)
+No Plan.
+\end{VerbExample}
+
+Paraméterek nélkül kiadva a bejelentkezettt felhasználók nevét is kiírja. A
+következő példában a \texttt{-m} opció nélkül nem csak a felhasználónevet
+keresné, hanem a valódi névben is megnézné, hogy az adott karakterosozat
+szerepel-e, így további felhasználókat is listázna, így viszont a pontos
+illeszkedést kapjuk. A listázott adatok: azonosító (login), név, home könyvtár,
+parancsértelmező (shell), mikor, melyik terminálon és honnan jelentkezett be. A
+``messages off'' azt jelenti, hogy nem fogad el üzeneteket, ugyanezt jelenti az
+első példában a ``TTY'' oszlopban látható csillag karakter is.
+
+Kiírja, hogy van-e levele, és a \texttt{.plan} fájl tartalmát is, feltéve, ha el
+tudja olvasni. Nálam nincsen ilyen fájl, ezért a ``No plan'' szöveg jelenik meg.
+
+Az üzenetek tiltását és engedélyezését a \texttt{mesg} paranccsal lehet
+szabályozni, a \texttt{y} paraméterrel engedélyezni, \texttt{n}-nel pedig
+tiltani:
+
+\begin{VerbExample}
+mesg y              # engedélyezés
+mesg n              # tiltás
+\end{VerbExample}
+
+
+Hogyan tudunk egy másik felhasználónak írni? A Unix világban már nagyon
+hosszúnak számító \texttt{write} paranccsal. Hosszú, ugyanis általában két,
+esetleg három karakteres a legtöbb parancs. Paramétere annak a felhasználónak az
+azonosítója, akinek gépelni szeretnénk. Mivel a program a terminálra ír,
+miközben a másik rajta dolgozik, ezért úgy illik, hogy valahogyan jelezzük,
+mikor fejeztük be azt, amit épp írunk, és ekkor a másik elkezdhet írni. Enélkül
+a másik félig elkezdett sorában fog megjelenni az üzenetünk, ami nagyon zavaró.
+\ut{write valaki}
+A programból a Ctrl-D leütésével léphetünk ki.
+
+\subsection{Környezet - a számítógép}
+
+Fentebb láthattuk, hogyan lehet megtudni, mennyi ideje megy a számítógép, és
+mekkora a terhelése. Erre szolgált az \texttt{uptime} parancs. Azonban további
+információkat is meg lehet tudni, így a \texttt{df} az egyes partíciók
+összméretét, foglalt és szabad részének méretét írja ki:
+
+\begin{VerbExample}
+panther@tassadar ~ $ df
+Fájlrendszer          1K-blokk   Foglalt    Szabad Fo.% Csatl. pont
+/dev/sda3            194396620 167506840  26889780  87% /
+udev                     10240       224     10016   3% /dev
+shm                    2023320         0   2023320   0% /dev/shm
+panther@tassadar ~ $ df  -h
+Fájlrendszer         Méret  Fogl. Szab. Fo.% Csatl. pont
+/dev/sda3             186G  160G   26G  87% /
+udev                   10M  224K  9,8M   3% /dev
+shm                   2,0G     0  2,0G   0% /dev/shm
+panther@tassadar ~ $ df  --si
+Fájlrendszer          Méret  Fogl.  Szab.  Fo.% Csatl. pont
+/dev/sda3              200G   172G    28G  87% /
+udev                    11M   230k    11M   3% /dev
+shm                    2,1G      0   2,1G   0% /dev/shm
+panther@tassadar ~ $ df  -m
+Fájlrendszer          1M-blokk   Foglalt    Szabad Fo.% Csatl. pont
+/dev/sda3               189841    163581     26260  87% /
+udev                        10         1        10   3% /dev
+shm                       1976         0      1976   0% /dev/shm
+\end{VerbExample}
+
+Általában ezekkel az opciókkal érdemes használni, alapesetben 1024 bájtos
+blokkal számol. A \texttt{-h} hatására jól olvasható módon írja ki, továbbra is
+1024-es szorzóval (K = kiB, M = MiB, G=GiB stb.). A \texttt{--si} ugyanez, ezres
+szorzóval (vagyis itt a K kB-ot jelent stb.), a \texttt{-m} pedig MiB-ban adja
+meg a méretet.
+
+A rendelkezésre álló memóriát is megkaphatjuk a \texttt{free} segítségével,
+opciók nélkül 1 kiB-os blokkok számában, \texttt{-m} esetén pedig MiB-ban.
+
+\begin{VerbExample}
+panther@panda:~$ free
+             total       used       free     shared    buffers     cached
+Mem:        246176     195508      50668          0          0      83092
+-/+ buffers/cache:     112416     133760
+Swap:       506008       3016     502992
+panther@panda:~$ free -m
+             total       used       free     shared    buffers     cached
+Mem:           240        190         49          0          0         81
+-/+ buffers/cache:        109        130
+Swap:          494          2        491
+\end{VerbExample}
+
+Végezetül magának a hardvernek az adatait is megtekinthetjük a
+\texttt{/proc/cpuinfo} fájl listázásával és az \texttt{lspci} használatával. A
+példában szereplő lista nem teljes és a sorok végét sem tartalmazza.
+
+\begin{VerbExample}
+panther@panda:~$ cat /proc/cpuinfo
+processor       : 0
+vendor_id       : GenuineIntel
+cpu family      : 6
+model           : 8
+model name      : Celeron (Coppermine)
+stepping        : 10
+cpu MHz         : 906.741
+cache size      : 128 KB
+fdiv_bug        : no
+hlt_bug         : no
+f00f_bug        : no
+coma_bug        : no
+fpu             : yes
+fpu_exception   : yes
+cpuid level     : 2
+wp              : yes
+flags           : fpu vme de pse tsc msr pae mce cx8
+bogomips        : 1816.05
+
+panther@panda:~$ lspci
+00:00.0 Host bridge: VIA Technologies, Inc. VT82C693A/694x [Apollo PRO 
+00:01.0 PCI bridge: VIA Technologies, Inc. VT82C598/694x [Apollo MVP3/
+00:07.0 ISA bridge: VIA Technologies, Inc. VT82C686 [Apollo Super South]
+\end{VerbExample}
+
+\section{Editorok}%
+\label{sec:editors}
+
+Amikor egy-egy szövegfájlt, szkriptet vagy éppen valamely program egyik
+forrásfájlját módosítjuk, akkor hasznos, ha a használt
+\emph{editor} elég nagy tudású ahhoz, hogy támogassa munkánkat. Egy rendszeren
+ebből sokféle van, a legminimálisabb tudásútól (\emph{mcedit}, \emph{pico})
+a legtöbbet tudóig (\emph{ViM}, \emph{Emacs}). Az előbbit illik ismerni, hiszen
+lényegében bármely Unix változat elé ülünk le, vagy ez, vagy pedig ennek az őse,
+a \emph{vi} biztosan fenn lesz az adott gépen.
+
+\subsection{A vim}
+
+A vim alapvetően két módban futhat, az egyikben parancsokkal lehet vezérelni, a
+másikban pedig a szöveget módosítani. A váltás közöttük például az \texttt{ins}
+és az \texttt{esc} billentyűk használatával lehetséges.
+
+A ``parancsmód'' főbb lehetőségeit \aref{tab:vim-ex}.\ táblázat foglalja össze.
+
+\begin{table}\center%
+\begin{tabular}{ll}\toprule
+Billentyű & Jelentés\\\midrule
+:q & kilépés\\
+:q!& kilépés mentés nélkül\\
+:w & mentés\\
+:syntax on & syntax highlight -- kódszínezés\\
+:!parancs & parancs futtatása a shellben\\
+v & kijelölés\\
+shift-v & sorok kijelölése\\
+\bottomrule
+\end{tabular}
+  \caption{A vim néhány billentyűkombinációja}
+  \label{tab:vim-ex}
+\end{table}
+
+
+\subsection{Az emacs}
+
+Az Emacs (helyesen kiejtve kb.\ imeksz) egy több évtizedes múlttal rendelkező
+editor, hiszen lisp-ben íródott. Magát a programot kevesen fejlesztik, ám
+\emph{lisp} nyelven bárki által programozható, és számtalan kiegészítés létezik
+hozzá. A vi-hoz hasonlóan szokatlan a működése, mert bár nincs megkülönböztetve,
+hogy mikor lehet parancsot kiadni, s mikor lehet szöveget szerkeszteni, a
+vezérlése billentyű-kombináció sorozat révén lehetséges. Ezek megértéséhez
+tudnunk kell, hogy a Control gombot C-vel, a Meta gombot pedig M-mel
+rövidíti. Ez utóbbi \textsc{pc}-k esetén az Alt gomb, míg Mac esetén a
+Command. Például C-x C-s a mentés.
+
+\begin{table}\center
+\begin{tabular}{ll}\bottomrule
+Billentyű-kombináció &Jelentés\\\midrule
+C-x C-c & kilépés\\
+C-x C-s & mentés\\
+C-x C-f & másik fájl megnyitása a név megadásával\\
+C-x C-w & mentés másik név megadásával\\
+C-SPACE & kijelölés kezdete\\
+C-x w   & kivágás\\
+C-x y   & beillesztés\\\midrule
+C-x b   & ugrás másik fájlra (pufferre)\\
+C-x 1   & 1 részre osztott ablak\\
+C-x 2   & vízszintesen tagolt ablak\\
+C-x 3   & függőlegesen tagolt ablak\\
+\bottomrule
+\end{tabular}
+  \caption{Emacs vezérlése}
+  \label{table:emacs}
+\end{table}
+
+
+
+\section{Néhány példa}
+
+A bash működése viszonylag egyszerű, ám összetett, bonyolult programok --
+szkriptek -- is viszonylag könnyedén írhatóak segítségével is, melyek elsősorban
+szövegfeldolgozásra, vagy pedig gyakran ismétlődő tevékenység elvégzésére
+szolgálnak.
+
+A következő példa azt mutatja meg, hogy egyszerű eszközöket felhasználva egy
+bonyolultabb erdményt is megkaphatunk:
+
+\begin{VerbExampleNum}
+panther@panda:~$ cat /proc/cpuinfo | grep cpu\ MHz
+cpu MHz         : 906.741
+panther@panda:~$ grep cpu\ MHz /proc/cpuinfo | cut -f2 -d:
+ 906.741
+\end{VerbExampleNum}
+
+Az első parancsban a \texttt{cat} immár ismerős, ennek kimenetét módosítja a
+\texttt{grep}, a mögötte álló szöveget ('cpu MHz') tartalmazó sorokat hagyja
+csak meg, azaz megszűri. Innen kapták a \texttt{grep}-hez hasonló programok a
+\emph{szűrő} elnevezést, hiszen a bemenetüket megszűrik vagy
+átalakítják. Majdnem mindegyik elfogad fájlneveket is, ezért a \texttt{cat}
+paranccsal nem is szükséges kiiratnunk a tartalmukat, hogy e kimenetet
+használjuk fel egy másik program bemeneteként. Ez utóbbi esetben a két parancs
+egy \emph{csővezezetéket} -- angolul: pipe -- alkot, és a köztük álló
+karakternek is ez a neve (és magyar billentyűzet-kiosztás esetén egy
+\textsc{pc}-n az AltGr-W ``billentyű-kombináció'' csalja elő). A \texttt{cut} a
+második mezőt hagyja csak meg ebben a példában, a mezőelválasztó karakter pedig
+a kettőspont volt.
+
+Az összes ``.txt'' végződésű fájl nevének kiírássára is számos lehetőség van,
+például:
+
+\begin{VerbExampleNum}
+~ $ ls *.txt
+a.txt b.txt
+~ $ ls -1 *.txt
+a.txt
+b.txt
+~ $ find . -name '*.txt'
+./a.txt
+./b.txt
+~ $ for i in *.txt; do echo $i; done
+a.txt
+b.txt
+~ $ find . -iname '*.txt'
+a.txt
+a.TXT
+b.txt
+\end{VerbExampleNum}
+
+Az első két parancs esetén a ``*.txt'' önmagában, idézőjel vagy aposztróf nélkül
+áll, ekkor a bash behelyettesíti az ott álló fájlneveket, tehát az első parancs
+azonos az
+
+\begin{VerbExample}
+ls a.txt b.txt
+\end{VerbExample}
+
+\noindent kiadásával, amikor listázzuk e fájlokat. További tulajdonságokat az
+\texttt{ls -l} paranccsal lehet megtekinteni, az \texttt{-l} opció esetén a
+jogosultságokat, tulajdonost, csoportot és módosítási időt is láthatjuk. A
+második példában a \texttt{-1} opció hatására minden fájlnév külön sorba kerül.
+
+Az ötödik sorban a \texttt{find} az aktuális könyvtárban -- melynek jele az egy
+pont -- és annak alkönyvtáraiban keresi az összes \texttt{.txt} végződésű fájlt
+és könyvtárat. Ekkor a ``*.txt'' aposztrófok között áll, ezért a program
+változtatás nélkül, ebben a formában kapja meg. A 12.\ sorban lévő változat a
+\texttt{-iname} paramétert használja, ekkor a fájlnévben lévő kis-és nagybetűk
+közt nem tesz különbséget, bár a Linux alapvetően megkülönbözteti a kis- és
+nagybetűket.
+
+A 9.\ sorban lévő for utasítás (ciklus) ugyanazt írja ki, mint az \texttt{ls
+  -1}, csak bonyolultabb az alakja, amely más feladatoknál lényeges. Az
+\texttt{i} egy változónév, amely ekkortól létezik, és a \texttt{\$i} formában
+kapjuk meg az értékét. Az \texttt{in} után egy lista szerepel, amely minden
+elemének értékét egyszer felveszi az \texttt{i} változó. Mint fentebb láthattuk,
+a bash itt is kifejti a \texttt{*.txt} kifejezést, vagyis az \texttt{in a.txt
+  b.txt} az, ami ténylegesen le is fut. A cklus magja a \texttt{do} és
+\texttt{done} kulcsszavak között szerepel.
+
+A fenti parancsok között van még egy lényeges különbség: a \texttt{find} esetén
+aposztrófok között szereplő ``*.txt'' biztosan működik, míg nagyon sok fájl
+esetén az összes többi nem, ugyanis ekkor nem fér el a parancssorban, egy
+utasítás hossza fájlnévvel, mindennel együtt nagyjából 16 KiB méretű lehet.
+
+\section{Szkriptek}
+\label{sec:scripts}
+
+Egy szkriptfájl egy olyan szöveges állomány, amely valamely program által
+értelmezhető utasításokat -- parancsokat -- tartalmaz. Ahhoz, hogy ezt
+programként használhassuk, futtathatóvá kell tenni. Amely program képes egy
+parancsokat tartalmazó fájlt feldolgozni, ahhoz írható szkriptfájl
+(parancsfájl). 
+
+Valójában a kettő nem teljesen ugyanaz, mivel a parancsokat tartalmazó állományt
+paraméterként megadjuk az adott programnak, míg a szkriptfájlt le is tudjuk
+futtatni, anélkül, hogy lényeges lenne, mely program dolgozza fel. A bash is
+ilyen program, valamint a sed is, -- ez utóbbi alapvetően szöveghelyettesítésre
+szolgál és róla bővebben \aref{cha:szűrők}.\ fejezetben lesz szó, -- amely a
+\texttt{-f} opció után vár egy fájlnevet. 
+
+Mi a bash-t használjuk parancsértelmezőnek, így felmerül a kérdés, hogy a bash
+honnan tudja, melyik programhoz tartozik a szkript?  A legelső sor határozza
+meg, hogy melyik parancs fogja lefuttatni, melynek a szerkezete:
+\texttt{\#!programnév}, vagy ha további opciók szükségesek, akkor
+\texttt{\#!programnév opciók}. Ez a bash esetén \texttt{\#!/bin/bash}, a sed
+esetén pedig \texttt{\#!/bin/sed -f}. Ha a program neve nem tartalmaz teljes
+elérési utat, akkor a PATH környezeti változóban megadott könyvtárakban keresi.
+
+A bash rávehető arra, hogy kiírja mit is csinál a \texttt{-x} opció
+használatával, mely hibakareséshez hasznos lehet, ha valamiért meglepő az
+eredmény, vagy egyszerűen csak nem a várt módon viselkedik a parancsfájl.
+
+Mint minden programnak, a szkripteknek is lehetnek paraméterei, ezekre a
+\texttt{0}, \texttt{1} stb.\ nevű változókra lehet hivatkozni. A \texttt{\$0} az
+az érték -- egészen pontosan programnév -- amelyikkel a szkriptünket
+meghívták. Az első paramétert a
+\texttt{\$1} megadásával használhatjuk és így tovább a kilencedik paraméterig. A
+tizediktől kezdve már picit más jelölést alkalmazunk (részletesebben lásd
+\aref{sec:vars-eval}.\ fejezetben), ugyanis itt a \texttt{\$10} és
+\texttt{\$\{10\}} között nagy különbség van. Az előbbi az első paraméter értéke
+és utána egy '0' karakter, az utóbbi pedig a 10.\ paraméter értéke.
+
+
+% Local Variables:
+% fill-column: 80
+% mode: latex
+% End:

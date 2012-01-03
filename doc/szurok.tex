@@ -1,0 +1,587 @@
+\chapter{Szűrők}%
+\label{cha:szűrők}
+
+Egy Unix-hoz hasonló rendszeren, amilyen a Linux is, számtalan program
+található, amelyek együttes használatával lényegében bármilyen feladatot
+elvégezhetünk. Ezek alapvetően szövegfeldolgozásra -- és számításra --
+készültek, ugyanis kezdetben nem volt grafikus felület, azonban ma már másra is
+használható a parancssor, például egyszerűbb képfeldolgozásra (kivágás,
+összeillesztés, pixelek megváltoztatása stb.).
+
+\Aref{cha:shell}.\ fejezetben látott \texttt{grep} és \texttt{cut}
+parancsokhoz hasonló eszközök valamilyen bemenetet olvasnak és kimenetükre
+írnak, miközben azt a legtöbb esetben módosítják is. Tulajdonképpen megszűrik
+azt, ezért lett összefoglaló nevük: \emph{szűrők} (filters).
+
+Bár a fenti példák esetén egy másik program kimenete volt e szűrők bemenete, nem
+csak innen olvashatnak adatokat -- legtöbbször sorokat --, hanem fájlokból
+is. Ha paraméterként nem adunk meg fájlnevet, akkor viszont a \emph{szabványos
+  bemenetről} olvasnak, ami lehet a billentyűzet, de lehet egy másik program
+kimenete is. Az angol elnevezése \emph{standard input} vagy röviden stdin. Ahova
+e szűrők írnak, az a \emph{szabványos kimenet}, előzőek szerint standard output
+vagy stdout. Végezetül az esetleges hibákat a \emph{szabványos hibakimenetre}
+(standard error, stderr) írja a program.
+
+A kimeneteket át lehet irányítani vagy pedig egy másik program
+bemenetére lehet csatolni, az előbbivel a következő alfejezet foglalkozik. Az
+utóbbi esetben a két program egy csővezetéket (pipeline) alkot, hiszen a
+korábban megadott program kimenete a másik bemenetére jut, mintha egy csőben
+lennének, máshovan nem kerülhet adat. A programok közé egy ennek megfelelő jelet
+(angolul pipe -- cső -- karakter), a  \verb,|, karaktert kell tenni. A
+csővezeték lehet hosszabb is, melynek minden darabja a feladat egy kis szeletét
+oldja meg, mégis az egész eredménye egy esetlegesen bonyolult feladat megoldása.
+
+Most a következőkről lesz szó: átirányításról \aref{sec:filters-redirect}.\ %
+alfejezetben, majd ezek után a lényegesebb szűrőkről, különös tekintettel a
+\texttt{grep} és \texttt{sed} programokra \aref{sec:filters-grep}.\ és
+\aref{sec:filters-sed}.\ alfejezetekben.
+
+
+\section{Átirányítások}
+\label{sec:filters-redirect}
+
+A programok kimenetét át lehet irányítani, egyrészt a szabványos kimenet és
+hibakimenet átirányítható a másikba, másrészt fájlba is kerülhet a kiírt szöveg
+(adat).
+
+\begin{VerbExampleNum}
+program  >fájl     # fájlba írás felülírással
+program >>fájl     # fájlba írás végére fűzéssel
+program  >&2       # stdout átirányítása stderr-re
+program 1>&2       # szintén, csak a kimenet száma is ki van írva
+program 2>&1       # stderr az stdout-ra
+program 2>fájl     # hibák (stderr) fájlba írása
+program >| fájl    # fájlba írás, kényszerített változat
+\end{VerbExampleNum}
+
+Figyeljünk arra, hogy ha létezik a fájl, akkor az első esetben felülíródik a
+tartalma. Ekkor a bash nulla hosszúságúra csonkolja a fájlt, s csak ezután kapja
+meg a program. Ezért nem megy az, hogy egy szűrő beolvas egy fájlt, majd pedig
+egyből vissza is írja ugyanazt a fájlt, hiszen még az olvasás előtt nulla
+hosszúságú lesz.
+
+Ezért létezik egy bash beállítás, amely véd a \emph{véletlen} felülírás ellen,
+amilyen az előző is, ennek beállítása:
+\begin{VerbExample}
+shopt -so noclobber  
+\end{VerbExample}
+
+Minden kimenetnek van egy azonosító száma, a szabványos kimeneté az egyes, a
+hibakimeneté pedig a kettes. Az átirányításokban ezt kell használni, az alapeset
+az, amikor a kimenetet irányítjuk át. Ha a másikra, és nem a fájlba kerül az,
+amit a program kiír, akkor a nagyobb jel (\verb|>|) után egy és jel (\verb|&|)
+szerepel, mely után azonnal jön az a szám, amelynek megfelelő kiemetre át
+akarjuk irányítani, a nagyobb jel előtt közvetlenül pedig az a szám, amely
+kimenetet átirányítjuk. A parancsot elhagyva a lehetséges átirányítások ezek
+szerint az alábbiak:
+
+\begin{VerbExample}
+ >&2   # stdout stderr-re (az alapértelmezett: sdout)
+1>&2   # stdout stderr-re (explicit módon megadva a szabványos kimenetet)
+2>&1   # stderr stdout-ra
+\end{VerbExample}
+
+Természetesen ugyanígy működik a fájlba íratás is. A kérdés már csak az, hogy mi
+történik, ha egyszerre átirányítjuk mindkét kimenetet. Ha mindkettőt különböző
+fájlba, akkor nincsen semmi különleges benne. Ha viszont az egyiket egy fájlba
+irányítjuk, akkor számít a sorrend: ha valamelyiket elirányítottuk, akkor az már
+úgy marad, részletesebben lásd lejjebb.
+
+\begin{VerbExampleNum}
+parancs  >&2 2>filename
+parancs 2>&1  >filename
+parancs 2>filename >&2
+\end{VerbExampleNum}
+
+Az első kettő csak az stdout-stderr helyében tér el, ezért tekintsük az első
+esetet. A bash az első átirányításkor -- stdout az stderr-re -- még nem tudja,
+mi fog történni a hibakimenettel, ezért \emph{ attól függetlenül, mindenképpen},
+az stderr-re kerül az stdout kimenete. Az \emph{eredeti} hibakimenet viszont
+fájlba íródik.
+
+Ezek után már könnyen kitalálható, mi történik a harmadik esetben. A szabványos
+hibakimenet egy fájlba kerül, és ezután irányítjuk át a kimenetet a
+hibakimenetre, amiről már tudja a bash, hogy hova kerül, ezért az is beleíródik
+a fájlba.
+
+\section{Alapvető szűrők}
+\label{sec:filters-simple}
+
+Egy telepített rendszeren nagyon sok különböző kis programocska lehet, melyeknek
+egy része mindennap használatos (például a \texttt{grep}, egy másik részére
+ritkán bár, de szükségünk lehet (például az \texttt{nl} és az \texttt{od}),
+másokat lehet, hogy sosem használunk. Ez  a rész a gyakori szűrőkkel
+foglalkozik.
+
+
+\subsection{Fájl kiiratása}
+\label{ssec:filters-cat}
+
+A legegyszerűbb szűrő az a program, amely a paramétereiben felsorolt fájlokat
+összefűzi, egymás után kiírja a tartalmukat. Bár egy szövegfájlban az összes sor
+végén áll egy újsor karakter, ha az utolsó sorban valamiért még sincsen, majd
+ezt és egy másik fájlt is kiiratunk, akkor e fájl utolsó sora és a következő
+paraméterben madott állomány első sora a képernyőn egyetlen sorba kerül --
+feltéve, ha kifér. E program a \texttt{cat}, amely a konkatenálás  (concatenate)
+szóból kapta a nevét. Ha elhagyjuk a paramétereit, akkor a standard inputról
+olvassa be a sorokat, és változatlan formában kiírja, mely éhány esetben hasznos
+lehet. Most pedig lássunk pár példát.
+
+\begin{VerbExampleNum}
+cat >file               # billentyűzetről új fájlba írás
+cat f1 f2 f3 >f4        # több fájl összefűzése eggyé
+cat f1 f2 f3 | program  # több fájlt összefűzve egy másik programnak
+\end{VerbExampleNum}
+
+Az első eset editor nélküli fájlba írást tesz lehetővé, így nem kell megvárni,
+amíg a szerkesztő betöltődik a memóriába. A második például akkor hasznos, ha
+egy \texttt{iso} fájlt szétdarabolva tesz fel valaki, hogy ne kelljen túl nagy
+darabokat újra letölteni, ha a fájl menet közben megsérül, valamint le lehessen
+tölteni akkor is, ha a webszerver nem kezeli a nagy fájlokat (ha van, akkor 2
+GiB ez a korlát, 
+egy \textsc{dvd} lemez pedig 4.4 GiB méretű).  Ekkor csak össze kell fűzni
+egyetlen állománnyá. A harmadik változat meg akkor lehet hasznos, ha sok
+különböző fájlon kellene ugyanazt megtenni, és ráadásul az eredmény lehet
+egyben, nem pedig külön-külön fájlonként.
+
+Érdekességképpen mivel a program neve macskát is jelent, ezért ennek egy
+módosított változatát is megírták, melynek kutya (\texttt{dog}) lett a neve, és
+már weboldalakat is ki tud írni a szabványos kimenetére:\\
+\texttt{dog http://www.kernel.org/}.
+
+\subsection{A fájlok eleje és vége}
+
+A következő két szűrő a fájlok elejét illetve végét írja ki, alapesetben tíz
+sort, ám a megfelelő opciót megadva ettől eltérő számút is ki tud írni, valamint
+lehetőséget nyújt arra is, hogy valahány sort ne írjon ki. A fájlok elejéről a
+\texttt{head} olvas, végéről pedig a \texttt{tail}. A régi \textsc{unix}
+rendszerek valamint a \textsc{bsd} család esetén is ezt a számot mint opciót
+kell meadni, a Linuxokon futó (\textsc{gnu}) változat pedig elvárja, hogy a
+\texttt{-n} opció után szerepeljen ugyanez az érték.
+
+\begin{VerbExample}
+head fnev       # első 10 sort
+head -n10 fnev  # első 10 sort
+head -n-2 fnev  # utolsó 2 sor kivételével mindent
+tail fnev       # az utolsó 10 sort
+tail -n8 fnev   # az utolsó 8 sort
+tail -n+3 fnev  # a 3. sortól mindent
+tail -c5        # utolsó 5 karakter 
+\end{VerbExample}
+
+Ezeket kombinálva a fájl bármely szelete megkapható. Arra érdemes figyelni, hogy
+amennyiben nagyon sok sort kell feldolgozni, akkor már az első szűrő kimenete is
+a lehető legrövidebb legyen. Például a 3. sortól a 8.-ig történő kiírás esetén
+előbb az első 8 sort érdemes meghagyni, majd ebből tovább szűrni, nem pedig
+először a 3.-tól kezdve mindent, majd pedig ebben az első 6 sort meghagyni,
+ugyanis csak így lesz gyors.
+
+Ha nem a \texttt{-n}, hanem a \texttt{-c} opciót használjuk, akkor a fájlok vagy
+pedig a szabványos bemenet első illetve utolsó néhány bájtját tudjuk kiiratni.
+
+\subsection{A sorok részei}
+
+Nem csak a fájl bizonyos sorait irathatjuk ki, hanem soronként haladva azok
+valamely darabját is. Ehhez nyújt segítséget a \texttt{cut} program, amellyel a
+sorok valamely \emph{mezője} vagy oszlopa íratható ki. Az alapértelmezett
+mezőelválasztó a tabulátor karakter, azonban megadható bármely másik
+is. Ha az adott sorban ez egyszer sem szerepel, akkor a teljes sor alkotja az
+első mezőt, illetve ha egymás után kétszeri is megtalálható, akkoris van köztük
+egy mező, amely üres, így a \texttt{cut} alkalmatlan például arra, hogy
+szóközökkel feltötött szövegben mezőket vágjon ki. Erre egy példa az \texttt{ls
+  -l} utasítás kimenete, amely oszlopokra tagolható, tehát a karakterek
+kivágásával feldolgozható lenne, ámde előre nem ismert az egyes oszlopok
+szélessége. A különböző könyvtárakban kiadott \texttt{ls -l} kimenetek
+összehasonlításakor szembeötlő a különbség: a tulajdonost és a csoportot jelző
+oszlop nem fix szélességű, ráadásul a fájl módosítási idejének megjelenítési
+formája is változó.
+
+A \texttt{-d} után adható meg a mezőelválasztó, a \texttt{-f} után egy vagy több
+mező, végül \texttt{-c} után a karakterek oszlopa (indexe). Akárhogy is adtuk
+meg a mezőket vagy az oszlopokat, mindig növekvően fogja megjeleníteni, azaz a
+\texttt{-f2,4,6} és a \texttt{-f6,2,4} hatása pontosan ugyanaz. Vesszővel
+elválasztva lehet több indexet megadni, amely lehet egy hosszúságú, ahogy az
+előbbi példákban szerepelt, valamint megadhatunk intervallumot is, a kezdő és a
+végpontot kötőjellel (mínusz jellel) elválasztva. Amennyiben a kezdő vagy pedig
+a végpont a sor első vagy utolsó karaktere, akkor nem szükséges kiírnunk a
+számát.
+
+\begin{VerbExample}
+cut -f1        # első mező
+cut -f-2,6     # második mezőig, valamint a 6. mező
+cut -c7,32-    # a 6. karakter (oszlop) és a 32.-től
+cut -f2 -d:    # a 2. mező; elválasztó a kettőspont
+\end{VerbExample}
+
+
+
+\subsection{Rendezés és ismétlődő sorok}
+
+Számos esetben szükséges az azonos sorok kiszűrése vagy számlálása, amelyhez
+elengedhetetlen a sorok rendezése, hiszen így az eredetileg $O(n^2)$ időt és
+$O(n)$ tárat igénylő összehasonlítás már lineáris idejű és csupán konstans tárat
+igényel. A rendezéshez a \texttt{sort} parancs használható, az ismétlődő sorok
+szűrésére pedig az \texttt{uniq}.
+
+A rendezés függ a nyelvi beállításoktól, például az
+\texttt{LC\_ALL=hu\_HU.UTF-8} környezeti változó esetén az \textsc{utf-8}
+kódolású fájlokat is helyesen dolgozza fel, valamint az 'a' betű után az 'á'
+következik, míg \textsc{LC\_ALL=C} esetén nem jó helyen szerepelnek az ékezetes
+karakterek. Sőt, nem csak ábécé szerint rendezhetünk, hanem számok nagysága
+szerint, így nem a ``10'' után következik a ``2''. 
+
+Mivel a sorok rendezése és az ismétlődő sorok elhagyása gyakori feladat, ezért
+erre van egy külön opció is, a \texttt{-u}, így a \texttt{sort | uniq} helyett
+elegendő \texttt{sort -u}-t írnunk, ami rádásul gyorsabban is fut.
+
+Az \texttt{uniq} program is számos opcióval rendelkezik, a leggyakoribbak a
+\texttt{-c}, amely az ismétlődő sorok előfordulási számát írja ki (1 ha csak
+egyszer fordult elő), \texttt{-d} a többször szereplőket, végül \texttt{-u} az
+egyedieket.
+
+\begin{VerbExample}
+sort            # abc szerint rendez
+sort -n         # számok szerint
+sort | uniq -c  # melyik sor hányszor szerepel
+sort -r         # fordított irányú rendezés
+\end{VerbExample}
+
+
+\section{Sorokban szöveg és karakterek cseréje}
+\label{sec:filters-replace}
+
+Soron belül egy vagy több karaktert, vagy akár a teljes sort is le lehet
+cserélni, a konkrét feladattól függően több lehetőség közül is
+választhatunk. Karakterek cseréjére alkalmas a \texttt{tr}, valamint a
+\texttt{sed} is, azonban hosszabb szöveget már csak a \texttt{sed} segítségével
+cserélhetünk. Vannak további lehetőségek is (\texttt{awk} és valamilyen másik
+szkriptnyelv használata is, például a Perl \cite{perl} is, de most ezekkel nem
+foglalkozunk, az \texttt{awk}-ról is később lesz szó).
+
+Manapság ha karakterekről valamint azokkal kapcsolatos műveletekről hallunk, a
+legelső kérdés, amit meg kell vizsgálnunk, hogy éppen melyik karakterkódolásról
+van szó, az adott eszköz boldogul-e az eltérő ábrázolással. Számunkra most az
+\textsc{iso-8859-2} (latin2, egy bájtos) és az \textsc{utf-8} (több bájtos)
+kódolások az érdekesek. A \texttt{sed} ismeri mindkettőt, a \texttt{tr} azonban
+csak az egybájtos ábrázolásokkal képes működni.
+
+A \texttt{tr} talán az egyetlen olyan szűrő, amely kizárólag a standard inputról
+olvas szöveget, fájlt nem képes kezelni. Alapesetben két paramétert vár, két
+karakterhalmazt, amelyek között a csere történik. A karaktereket egymás után
+adjuk meg, így az első paraméterben megadott karakterek első elemét a másodikban
+megadottak első elemére, másodikat a másodikra stb.\ cseréli le. Lehet törölni
+is karaktereket, ekkor viszont nem kell a második paraméter, hiszen az első
+halmaz elemeit kell törölni, a \texttt{-d} opció használatával.
+
+A karekterhalmazok állhatnak egyesével felsorolt elemekből, valamint
+intervallumokból
+is, például az angol kisbetűket tartalmazó \texttt{[a-z]} halmazból. Szerepelhet
+itt oktálisan (8-as számrendszerben megadott) karakter is \verb|\NNN| alakban,
+például a szóköz, ami decimálisan 32, itt \verb|\040| formában szerel. Az escape
+szekvenciákat is ismeri, amilyen a \verb|\t| kifejezéssel reprezentált tabulátor
+karakter, valamint az újsor karakter (\verb|\n|).
+
+\begin{VerbExample}
+tr -d ' '            # szóköz törlése
+tr -d '[a-z]'        # angol kisbetűk törlése
+tr '[a-f]' '[A-F]'   # nagybetűsítés (hexadecimális számokban)
+tr '\t' ' '          # tab karakterek szóközre cserélése
+\end{VerbExample}
+
+A \texttt{sed} nem csupán egyszerű helyettesítésre alkalmas, hanem kisebb
+programokat (szkripteket) is lehet rá írni, ez utóbbival pillanatnyilag nem
+foglalkozunk. A \texttt{tr}-hez hasonlóan alkalmas szöveghelyettesítésre is,
+például \texttt{y/abc/def/} formában. Az \texttt{y} jelzi, hogy karaktereket
+kell cserélnie, ezután -- itt legalábbis -- perjellel elválasztva következik,
+hogy mit kell cserélni, végül az, hogy mire. A program nem fogadja el az
+utasítást, ha nem azonos számú karakter szerepel mindkét részben, és még egy
+korlát van: nem képes tartományokat kezelni.
+
+A másik lehetőség a szöveghelyettesítés, ekkor az \texttt{s/mit/mire/opciók} az
+alak, erről részletesebben \aref{sec:filters-sed}.\ fejezetben lesz szó.
+
+
+
+\section{Sorok keresése -- a \texttt{grep} programcsalád}
+\label{sec:filters-grep}
+
+A leggyakoribb művelet egy vagy több állományban vagy akár a teljes
+könyvtárszerkezetben történő keresés, erre egy egész programcsalád van: a
+\texttt{grep} különböző elnevezésekkel -- melyek valójában különböző opciókat
+jelölnek. Az első, kötelező paraméter az a szöveg, amelyet az egyes sorokban
+keresünk, amely valójában egy minta, reguláris kifejezés, és a \texttt{grep} azt
+vizsgálja meg, hogy valamely sor megfelelő része illeszkedik-e erre a
+mintára. Működése:\\
+\ut{grep minta fájlnevek}
+
+A család általánosan használt tagjai a \texttt{grep}, \texttt{fgrep}, amely a
+\texttt{grep -F} opciójának felel meg, valamint az \texttt{egrep}, amely a
+\texttt{grep -E} megfelelője. Egyes linuxokon előfordul még az \texttt{rgrep}
+is, amely egy shell szkript és a \texttt{grep -R} vagy \texttt{grep -r}
+megfelelője. Látható, hogy a jelölés nem egységes, az egyes programok más-más
+egy betűs rövidítést használnak ugyanarra az opcióra (a rekurzív hívást következetlenül
+jelölik kis- és nagybetűvel is, és sajnos nem ez az egyetlen ilyen opció).
+
+A ``minta'' egy speciális karaktersorozhat, reguláris kifejezés (részletesebben
+lásd \aref{cha:regex}.\ fejezetben), azonban nem minden esetben, hiszen a
+\texttt{-F} opció vagy az ezzel ekvivalens \texttt{fgrep} használata esetén
+egyszerű szövegnek tekinti a \texttt{grep}.
+
+Az előbb felsorolt változatok jelentése: \texttt{grep} önmagában csak alap
+reguláris kifejezéseket ismer, \texttt{egrep} pedig kiterjesztetteket is, az
+\texttt{fgrep} nem foglalkozik reguláris kifejezésekkel, vagyis ténylegesen a
+felsorolt karaktereket tartalmazó sorokat keresi. Az \texttt{rgrep} pedig -- már
+ahol létezik -- könyvtárakat elfogad paraméterként, ekkor végignézi az azok
+alatt megtalálható összes könyvtárbejegyzést.
+
+Előfordulhat, hogy az illesztendő minta '-' karakterrel kezdődik, ezt viszont a
+\texttt{grep} opciónak venné, ezért a \texttt{-e} után kell írnunk a mintát,
+hogy helyesen értelmezze a program.
+
+A \verb|^| (kalap) és a \verb|$| (dollár) a reguláris kifejezésekben a sor
+elejére illetve végére illeszkedik. A következő példa:\\
+\utbeh\verb|grep From  $MAIL|\\
+azon sorokat írja ki a levelekből, amelyekben a From karaktersorozat
+szerepel, akár legvégén is. Ezzel szemben a\\
+\utbeh\verb|grep ^From  $MAIL|\\
+csak a From karakterekkel kezdődő sorokat írja ki. A\\
+\utbeh\verb,grep /bash$ /etc/passwd | \verb|cut -f1 -d:,\\
+azokat a sorokat hagyja meg a \texttt{/etc/passwd} állományból, amelyekben a
+bejelentkezési parancsértelmező (login shell) a bash, ez áll ugyanis a sorok
+végén. A \texttt{grep} kimenetét a \texttt{cut} kapja meg, 
+
+
+A megtalált soroknál kiiratható a fájlnév is, valamint a sor sorszáma
+is. Alapesetben ha csak egyetlen paraméter esetén
+a fájlnév nem jelenik meg, ám több állomány megadásakor már mindenképpen kiírja
+az aktuális fájl nevét is. Ez kikényszeríthető a \texttt{-H} opcióval és
+letiltható a \texttt{-h} segítségével. A \texttt{-n} hatására jelenik meg az
+is, hogy hanyadik sorról van szó. A \texttt{grep -nH} kimenetének szerkezete az
+alábbi:\\
+\utbeh\texttt{fájlnév:sorszám:eredeti sor}.
+
+\begin{VerbExample}
+~>  grep -nH ssh /etc/services
+/etc/services:77:ssh              22/udp     # SSH Remote Login Protocol
+/etc/services:78:ssh              22/tcp     # SSH Remote Login Protocol
+/etc/services:1571:sshell       614/udp     # SSLshell
+/etc/services:1572:sshell               614/tcp     # SSLshell
+\end{VerbExample}
+
+A forráskódban történő keresésnél zavaró lehet, ha csak a megtalált sorokat írja
+ki, a szövegkörnyezet nélkül nehéz megállapítani, hogy éppen melyik is a
+számunkra érdekes sor. Erre többféle kapcsoló is van, a legegyszerűbbel a
+megtalált sor előtt és után kiirandó sorok számát lehet megadni:
+\texttt{-C szám} vagy hosszabb formában: \texttt{--context szám}, ám akár külön
+is szabályozható a korábbi és későbbi megjelenített sorok száma a \texttt{-B}
+vagy \texttt{--before-context} valamint a \texttt{-A} vagy
+\texttt{--after-context} opciók után megadott értékkel.
+
+A teljesség igénye nélkül következzenek a példák.
+
+\begin{VerbExample}
+fgrep -h 'int main('  *.c     # Van-e már main() fv. a forráskódban?
+                              # Fájlnév nem érdekes.
+fgrep -nHi almafa *.txt       # fájlnév:sorszám:megtalált sor formájú
+                              # kiírás. Kis- és nagybetűk azonosak.
+grep -C3 ^szoveg    # stdin-ről 'szoveg' kezdetű sorok + környezetük
+egrep 'a|b' *.txt   # 'a'-t vagy 'b'-t tartalmazó sorok (csak egrep)
+\end{VerbExample}
+
+A minta is szerepelhet egy fájlban, ekkor a \texttt{-f} opció után kell megadni.
+
+\begin{VerbExample}
+~>  cat fminta
+ab?c?d?t
+~> egrep -f fminta /etc/fstab | head -n2
+root:*:0:0:System Administrator:/var/root:/bin/sh
+sshd:*:75:75:sshd Privilege separation:/var/empty:/usr/bin/false
+\end{VerbExample}
+
+A példában azokat a sorokat írja ki az \texttt{egrep}, amelyekben van egy `a'
+betű, majd esetleg egy `b', amelyet a `c' illetve a `d' követhet, ebben a sorrendben,
+de nem biztos, hogy vannak, és utána egy `t' következik. Tehát helyes például a
+következő néhány variáció: `at', `abt', `adt', `abct', `acdt'.
+
+\section{A \texttt{sed} (stream editor)}
+\label{sec:filters-sed}
+
+A \texttt{sed} egy jól scriptezhető szűrő, az egyes sorokra különbözőképpen
+működhet.
+
+A következő példákban a \texttt{sed} standard inputról olvas (vagy a bash
+átirányítása révén fájlból, esetleg másik program kimenetéről). Kezdetben
+cseréljük le az ``alma'' szót ``körte'' szóra:\\
+\ut{sed 's/alma/körte/'}\\
+Ez azonban csak az elsőt helyettesíti, mert nem globális, a teljes sorra
+vonatkozó a csere. Ennek javítása:\\
+\ut{sed 's/alma/körte/g'}\\
+Ha a `g' opción kívül az `i'-t is megadtuk volna, akkor a kis- és nagybetűk
+között nem tenne különbséget, így azonban például a csupa nagybetűs
+``\textsc{alma}'' szót nem cseréli le.
+
+Az utasításokat be is tehetjük egy fájlba, amelynek a nevét a \texttt{-f} opció
+után kell megadnunk:
+
+\begin{VerbExample}
+sed -f műveletek.sed
+\end{VerbExample}
+
+\noindent Sőt, akár szkriptfájlt is írhatunk, például:
+
+\begin{VerbExample}
+#!/usr/bin/sed -f
+s/alma/körte/gi
+\end{VerbExample}
+
+\noindent Ha csak azokban a sorokban szeretnénk cserélni, amelyekben van ``dió''
+szó is, akkor a következőképpen néz ki a szkript második sora:
+
+\begin{VerbExample}
+/dio/ s/alma/korte/g
+\end{VerbExample}
+
+\noindent ez azonban csak az egyik lehetséges megoldás. A másik összetetteb
+programoknál hasznos, viszont ilyen egyszerű példánál látszik a legjobban,
+hogyan is kell használni. Ezek a címkék, amelyekhez egy vagy több művelet
+tartozik, és a szkript bármely részén állhat egy olyan utasítás, hogy a vezérlés
+ugorjon ide.
+
+Először tekintsük a szabványos bemenetre érkező adatot:
+
+\begin{VerbExample}
+alma alma cseresznye
+dio mogyoro alma
+dio alma
+mogyoro alma meggy narancs
+\end{VerbExample}
+
+\noindent Első próbálkozás:
+
+\begin{VerbExample}
+#!/usr/bin/env sed -f
+/dio/ b csere
+:csere
+{ s/alma/korte/g }
+\end{VerbExample}
+
+A \texttt{b} az ugrás jele, utána egy címke neve van. Egy címke pedig
+kettősponttal kezdődik, amely után a neve van. Kapcsoszárójelek között megadható
+egy vagy több utasítás, amely akkor hajtódik végre, ha a címkére kerül a
+vezérlés. Az eredmény azonban nem a várt lesz:
+
+\begin{VerbExample}
+korte korte cseresznye
+dio mogyoro korte
+dio korte
+mogyoro korte meggy narancs
+\end{VerbExample}
+
+A gondot az okozza, hogy azok a sorok esetén, amelyekben nem szerepel a ``dio''
+szó,  nincsen külön definiált művelet, így a legelső arra alkalmasat hajtja
+végre, amely jelen esetben a \texttt{csere} címkéhez tartozó művelet lesz. Kis
+keresgélés után a \texttt{d} parancs tűnik megfelelőnek, hiszen törli a
+beolvasott sort, ám sajnos nem írja ki őket. Az egyes parancsok külön sorban
+kell, hogy szerepeljenek.
+
+\begin{VerbExample}
+#!/usr/bin/env sed -f
+/dio/ b csere
+d
+:csere
+{ s/alma/korte/g }
+\end{VerbExample}
+
+\noindent Az eredmény:
+
+\begin{VerbExample}
+dio mogyoro korte
+dio korte
+\end{VerbExample}
+
+\noindent A \texttt{d}-t \texttt{p} parancsra cserélve megint nem jó a kimenet,
+mert bár megjelenik az összes sor, de utána megint ráfut a címkére:
+
+\begin{VerbExample}
+alma alma cseresznye
+korte korte cseresznye
+dio mogyoro korte
+dio korte
+mogyoro alma meggy narancs
+mogyoro korte meggy narancs
+\end{VerbExample}
+
+\noindent Ezek szerint a helyes a \texttt{p} majd a \texttt{d}. Nézzük meg:
+
+\begin{VerbExample}
+alma alma cseresznye
+dio mogyoro korte
+dio korte
+mogyoro alma meggy narancs
+\end{VerbExample}
+
+\noindent Mi történik akkor, ha a címke utasításai \emph{után} még egy
+\texttt{p} is szerepel? A csere után ki fogja írni mégegyszer a sort?
+
+\begin{VerbExample}
+#!/usr/bin/env sed -f
+/dio/ b csere
+p
+d
+:csere
+{ s/alma/korte/g }
+p
+\end{VerbExample}
+
+\noindent Nézzük csak:
+
+\begin{VerbExample}
+alma alma cseresznye
+dio mogyoro korte
+dio mogyoro korte
+dio korte
+dio korte
+mogyoro alma meggy narancs
+\end{VerbExample}
+
+\noindent Tényleg ez történt, ugyanis a címkénél egyetlen helyettesítés van
+csupán, és bár az adott sorral több teendő nincs, mégsincsen törölve, azaz
+kellene még egy \texttt{d} is. Mivel eredetileg ez volt az utolsó utasítás, erre
+nem volt szükség.
+
+
+
+\section{További szűrők}
+\label{sec:filters-others}
+
+Az előzőkben a gyakrabban használt programokat láthattuk, a továbbiakban a
+valamivel ritkábban szereplő, de néha hasznos eszközöket vesszük sorra.
+
+
+
+\subsection{Teljes fájlok kiiratása}
+
+A \texttt{cat} parancson felül (lásd \aref{ssec:filters-cat}.\ alfejezet) még
+néhány hasznos eszköt van, a legegyszerűbb a \texttt{tac}, amely a sorokat
+fordított sorrenben írja ki, először az utolsót, és végül a legelsőt. Az
+\texttt{nl} a sorokat számozottan írja ki, végül az \texttt{od} decimális,
+hexadecimális és oktális értékeit is ki tudja írni a karaktereknek. Ezen utóbbi
+program hibakeresésnél is hasznos lehet, mert esetleg a terminál nem jelenít meg
+néhány begépelt karaktert, amikor melléütünk, a parancsfájlunk viszont emiatt
+nem fut le.
+
+\begin{VerbExample}
+tac               # standard input sorait fordítja meg
+nl a.txt          # a.txt nem üres sorait számozza
+nl -b a a.txt     # minden sor számozottan jelenik meg
+od a.txt          # oktális kiírás (2 bájtonként)
+od -c a.txt       # karakterenként, egyes karaktereket kódjukkal
+od -x a.txt       # hexadecimálisan, 2 bájtonkánt
+od -c -t x1 a.txt # karakterek + minden bájt hexadecimális kódja
+\end{VerbExample}
+
+
+% Local Variables:
+% fill-column: 80
+% mode: latex
+% End:

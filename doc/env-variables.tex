@@ -1,0 +1,325 @@
+\chapter{Környezeti változók}%
+\label{cha:env-vars}
+
+Bár a parancsokat használhatjuk fix paraméterekkel is, gyakori, hogy ismételten
+kell ugyanazt a programot minimális eltéréssel futtatni. Tipikusan a
+paraméterek, munkakönyvtár és egyes fájlnevek lehetnek eltérőek. Ezen
+eltéréseket könnyen kezelhetjük a környezeti változókkal, amelyeknek van neve és
+értéke, így elég csak egyszer megfelelően beállítani őket, később a név
+ismeretében megírhatjuk a már általánosan használható kódrészletet.
+
+Leginkább szkriptek esetén találkozhatunk velük, hiszen azok a paramétereiket
+környezeti változók formájában érhetik el. Vagy csupán e paraméterek
+befolyásolják a viselkedést, vagy pedig további változók, amelyeket tipikusan a
+szkript elején állíthatunk be -- például ha egy másik rendszeren a szükséges
+állományok és programok máshol találhatóak.
+
+A grep, sed és még számos egyéb eszköz a /bin könyvtárban található, azonban
+előfordulhat, hogy az adott változat már túl régi, ezért fordítunk magunknak egy
+újat, ekor már meg kell adnunk azt is, hogy melyik programra gondoltunk:
+
+\begin{VerbExample}
+#!/usr/bin/env bash
+
+GREP=/bin/grep
+CUT=/bin/cut
+CFGFILE=/etc/pelda.cfg
+
+host=$($GREP host $CFGFILE | $CUT -f1 -d= )
+\end{VerbExample}
+
+\indent és ekkor a \texttt{host} valamely számítógép nevét tartalmazza. Azonban
+ez sokszor nem éppen elegáns megoldás, ezért inkább azt mondjuk, hogy a
+programokat először ne a \texttt{/bin} könyvtárban keresse, hanem például a
+/usr/local/bin-ben. Ezt a \texttt{PATH} környezeti változó beállításával
+tehetjük meg:
+
+\begin{VerbExample}
+ #!/usr/bin/env bash
+
+PATH=/usr/local/bin:/bin:/usr/bin
+CFGFILE=/etc=pelda.cfg
+
+host=$(grep host $CFGFILE | cut -f1 -d= )
+\end{VerbExample}
+
+A továbbiakban e változók működéséről lesz szó, arról, hogy hogyan állítsuk be
+őket, milyen értéket vehetnek fel, és végül, hogy hogyan kaphatjuk meg az
+értéküket, vagy csupán annak egy részét.
+
+\section{A környezeti változók szintaxisa valamint beállítása}
+A változók neve a legfontosabb tulajdonságuk, mely nem állhat bármilyen
+karakterból, hanem csupán az angol ábécé kis- és nagybetűiből, számjegyekből
+valamint az alulvonás karakterből (A-Z, a-z, 0-9 és \_). A beállításkor ügyelni
+kell arra, hogy az értéke ne tartalmazzon szóközt, vagy ha mégis, akkor
+idézőjelek vagy aposztrófok között kell megadnunk az értéket, mely ezáltal védve
+van a shelltől.
+
+\begin{VerbExampleNum}
+NEV=érték
+NEV="hosszabb érték $NEV"
+NEV='hosszabb érték $NEV'
+NEV=
+unset NEV
+export NEV
+export NEV=érték PATH
+\end{VerbExampleNum}
+
+Az első négy művelet egy \texttt{NEV} nevezetű változónak állít be értéket,
+az ötödik megszünteti a változót, az utolsó kettő pedig exportálja.
+
+Most tekintsük meg, hogy pontosan mi történik az egyes parancsok kiadása
+után. Az első beállít egy szóközt nem tartalmazó értéket, ezért nem szükséges
+aposztróffal vagy idézőjellel védeni az értéket. Viszont csak akkor működik az
+értékadás (mindegyik esetben), ha a változó neve és érteke között pontosan egy
+egyenlőségjel áll, azon kívül pedig semmi. A második ugyanezt teszi, csak
+idézőjel védi az (esetleges) szóközöket, mindkét esetben az értékben szereplő
+változóbehelyettesítések megtörténnek, azaz ha egy dollárjel (\$) után egy
+változó neve áll, akkor annak értéke kerül a helyére. A \texttt{NEV} változó
+értéke ezzel "\texttt{hosszabb érték érték}" lesz, hiszen előtte az
+"\texttt{érték}" volt a tartalma.
+
+Ettől eltér a harmadik eset működése, mert ott nem idézőjel, hanem aposztróf
+van, amelynek az a jelentése, hogy pontosan a megadott érték kerüljön a
+változóba, jelen eseteben ez a "\texttt{hosszabb érték \$NEV}" szöveg, a
+változók
+értéke nem helyettesítődik be. A helyzet tovább bonyolítható, hiszen írható
+ilyen is (átmenetileg megszakítva az aposztróffal vagy idézőjellel védett
+értéket): \texttt{NEV='valamilyen \$szoveg'\$VALTOZO"a b c \$V2"}, ahol az
+idézőjeleken belüli, és az azt megelőző változók (\texttt{V2} és
+\texttt{VALTOZO}) értéke behelyettesítődik, az aposztrófok közti pedig nem
+(\$szoveg esetén a \$ jel megmarad).
+
+
+
+\section{Néhány fontosabb környezeti változó}
+
+A mindennapi munkánk során számos változót használunk, és
+jónéhány előre definiált változóval találkozhatunk, és mi is létrehozhatunk
+továbbiakat. Készen kapjuk a home könyvtár helyét megadó változót, \texttt{HOME}
+néven, amelyet a bejelentkezési azonosító (a példában \texttt{user}) alapján nem
+biztos, hogy kitalálhatunk. Általában \texttt{/home/user} az értéke, a pandán
+viszont ez \texttt{/h/u/user}. Megint csak a legtöbb esetben minden adatunk e
+könyvtárban található, bizonyos esetekben azonban célszerűbb külön könyvtárba
+tenni tipikusan a weblapokat és egyéb publikus fájlokat, hiszen ekkor már
+beállítható, hogy a home könyvtárat egyedül a tulajdonos érhesse el. A
+weblapokat alapesetben a \texttt{\$HOME/public\_html} könyvtár tartalmazza, a
+pandán viszont máshol van, lásd a következő bekezdést.
+
+Egy másik a bejelentkezési azonosítónk, a \texttt{USER} változóban, így már a
+\texttt{HOME} könyvtárat másképp is megkaphatjuk: \verb|/home/$USER|, illetve
+a pandorán \verb|/h/${USER:0:1}/$USER|, ugyancsak itt a honlap helye a
+\verb|/h/public/${USER:0:1}/$USER/public_html|.
+
+Az aktuális könyvtárat a \texttt{PWD} változó tartalmazza, amely megkapható a
+\texttt{pwd} parancs kiadásával is. Az előző munkakönyvárat az \texttt{OLDPWD}
+tartalmazza, azonban e változó nélkül is visszaléphetünk a korábbi könyvtárba:
+\begin{VerbExample}
+cd -
+cd ~-
+\end{VerbExample}
+
+A fájlrendszer szerkezetét láthattuk a \aref{cha:linux}.\ fejezetben, így fixen
+megadhatnánk az általunk használt programok nevét is, például
+\texttt{/bin/grep}, ám ha nem pont itt található (az általunk igényelt
+változat), akkor nem fog a szkriptünk működni. Ezért elég csak a program nevét
+(például grep) ismernünk, a pontos helyét pedig egy újabb, korábban definiált
+változóból tudhatjuk meg, amelynek \texttt{PATH} a neve. Kettősponttal
+elválasztott könyvtárnév-sorozatot tartalmaz, minimálisan a következőt:
+\texttt{/bin:/usr/bin}. A parancsértelmező használja ezt, amikor egy futtatandó
+programnak csupán a nevével találkozik, ilyenkor megnézi a legleső könyvtárat,
+hogy benne van-e. A \texttt{grep} épp igen, ezért le is futtatja. Ha nem ott
+lenne, akkor a következő könyvtárban, a \texttt{/usr/bin}-ben keresné.
+
+Ugyanezen elven működik a \texttt{CDPATH} változó is, amelyet ritkábban
+használunk, ám olykor nagyon hasznos. Tipikus értéke: \texttt{.:\~{}:Documents},
+vagyis a \texttt{cd} először az aktuális (más néven munka-) könyvtárban keres,
+majd a home-ban (ennek a rövidítése a ``\~{}'', tilde karakter), végül egyéb
+felsorolt könyvtárakban. Természetesen ez is csupán akkor működik, ha a
+könyvtárnév nem abszolút, azaz nem perjellel kezdődik, viszont a paraméterben
+lehet perjel is.
+
+A \texttt{PATH} változó azonban nem csak a parancsokhoz használható, hanem a
+szkriptek esetén is, ugyanis  a \texttt{.}\ vagy a \texttt{source} parancs is
+ezt a változót használja, azonban csakis abban az esetben, ha az aktuális
+könyvtárban nem szerepel az adott fájl:
+
+\begin{VerbExample}
+. almafa    
+\end{VerbExample}
+
+\noindent jelentése: az aktuális parancsértelmezőben fusson le az
+\texttt{almafa} nevű
+fájlban szereplő összes parancs. Először a munkakönyvtárban keresi ezt a fájlt,
+majd ha itt nincsen, akkor a \texttt{PATH}-ban felsorolt könyvtárakat nézi
+végig, hátha valamelyikben szerepel az \texttt{almafa}.
+
+Az \texttt{UID} változó tartalmazza a felhasználónevünkhöz rendelt számot, a
+\texttt{GROUPS} pedig a csoportjainkhoz. Minden felhasználó legalább egy csoport
+tagja, de tartozhat többe is, ezáltal csoportszinten lehet szabályozni, hogy ki
+milyen fájlokhoz és könyvtárakhoz fér hozzá.
+
+Az a szöveg, ami után a parancsokat begépelhetjük, a \emph{prompt}, ennek értéke
+a \texttt{PS1} változóban definiált, erre később még visszatérünk.
+
+A programok és szkriptek futtatásához kötődik a  \texttt{\$}, \texttt{?} és a
+\texttt{!} változó. Az első az aktuális folyamat (processz, mely most a
+parancsértelmező) azonosítója. Ez mindig egyedi az adott rendszeren, és
+indulásonként más és más. Az értékét például így írhatjuk ki (vagyis a dollárjel
+a változó \emph{neve}):
+
+\begin{VerbExample}
+echo $$
+\end{VerbExample}
+
+\noindent A kérdőjel változó az utoljára lefutott folyamat \texttt{státuszát}
+tartalmazza, amely 0 sikeres befejeződés esetén, bármilyen  hiba előfordulásakor
+viszont nemnulla. A felkiáltójel változó pedig az utoljára háttérben elindított
+program processz azonosítója (\textsc{pid}-je).
+
+Végül tekintsünk még két további változót:
+a \texttt{COLUMNS} és a \texttt{LINES} változó tartalmazza, hogy a terminálunk,
+amelyen éppen fut a parancsértelmező, hány oszlopot és hány sort képes
+megjeleníteni egyszerre. Alapesetben ez a méret 80x25, és a programkódoknál
+gyakran követelmény, hogy ekkor is látszódjék a teljes sor.
+
+
+\subsection{Prompt}
+
+A prompt, amely után a parancsokat beírjuk, a \texttt{PS1} változóban állítható
+be. Néha több sorba fér csak ki, amit írunk, ekkor a \texttt{PS2}-ben beállított
+szöveg van minden sorban (tipikusan \texttt{'> '}). Az utolsó ilyen változó a
+\texttt{PS4}, amely akkor jelenik meg, amikor a bash-t a \texttt{-x} opcióval
+indítottuk, \texttt{'+ '} a szokásos értéke.
+
+Mind a háromféle prompt ugyanolyan módon állítható, néhány speciális jelentéssel
+bíró karaktersorozat is van, például az azonosító, a gép neve, vagy éppen az
+aktuális idő, ezekre néhány példát \aref{table:prompt}.\ táblázat tartalmaz,
+további részletek a \textit{bash(1)} kézikönyvlapban.
+
+\begin{table}\centering
+\begin{tabular}{@{}cl@{}}\toprule
+Speciális karakter & Jelentés\\\midrule
+\verb|\u| & azonosító (\$USER)\\
+\verb|\h| & gép neve (\$HOSTNAME), az első '.'-ig\\
+\verb|\s| & a shell neve (basename \$0)\\
+\verb|\t| & pontos idő, ÓÓ:PP:MM formában\\
+\verb|\w| & az aktuális könyvtár neve (basename \$PWD)\\
+\verb|\W| & az aktuális könyvtár\\
+\verb|\\| & a '\textbackslash' karakter\\
+\verb|\#| & hanyadik kiadott parancs lesz\\\bottomrule
+\end{tabular}
+\caption{Példák a prompt lehetséges elemeire}
+\label{table:prompt}
+\end{table}
+
+
+
+\section{A környezeti változók többféle behelyettesítése}
+\label{sec:vars-eval}
+
+Az eddigiek alapján \texttt{\$NEV} beírásával a \texttt{NEV} környezeti változó
+értékét használjuk fel, ez azonban csupán a legegyszerűbb formája. További
+lehetőségek is vannak, az egyik, hogy jelöljük, mettől meddig tart a változó
+neve, a többi pedig ennek kibővített alakja. Egy változó egy részét is
+felhasználhatjuk, megadhatunk alapértelmezett értéket, ha nincs beállítva a
+változó, egyes részeit törölve az új értékkel dolgozhatunk, és hasonlók.
+
+A változó nevét kapcsoszárójelek közé téve egyértelműen jelezzük, hogy mettől
+meddig tart a név: \texttt{\$\{NEV\}}. Ez lényeges, hiszen mást jelent a
+\texttt{\$\{NEV\}\_1} és a \texttt{\$NEV\_1}: az előbbi a \texttt{NEV} változó
+értéke, majd pedig az \texttt{\_1} karakterek, az utóbbi viszont egy értelmes
+változónév, így a bash a lehető leghosszabb elnevezést keresi, amely jelen
+esetben a \texttt{NEV\_1}. Tehát a bash ezen nevű változó értékét fogja
+behelyettesíteni.
+
+Lehetőség van az érték egy szeleetének felhasználásra, például 
+a második karaktertől a végéig: \texttt{\$\{NEV:1\}},
+harmadiktól: \texttt{\$\{NEV:2\}} stb. Lényeges, hogy a legelső karakter indexe
+a nulla (0). Megadható, hogy hány karaktert szeretnénk kiírni, pédául a
+nulladikat (azaz a legelsőt) és a 3-5.\ karaktereket:
+
+\begin{VerbExample}
+echo ${NEV:0:1} ${NEV:3:3}
+\end{VerbExample}
+
+Amennyiben nem tudjuk biztosan, létezik-e a változó, azonban szükség van egy
+alapértelmezett értékre, akkor a \texttt{\$\{NEV:-alapertelmezett ertek\}}
+alakot használhatjuk, amikor is a változó eredeti értéke helyettesítődik be, ha
+létezett és nem üres, ellenkező esetben a \texttt{:-} után megadott érték. Az
+eredeti érték nem változik meg.
+
+Majdnem ugyanezt teszi, azonban be is állít alapértelmezett értéket a
+\texttt{:=} karaktereket tartalmazó kifejezés. A
+\texttt{\$\{NEV:=alapertelmezett ertek\}} jelentése: amennyiben a \texttt{NEV}
+változó nincs beállítva, vagy null (üres), akkor ezt az új értéket kapja meg a
+változó, ezután az érték behelyettesítre kerül. Más esetben a változó értéke
+helyettesítődik be.
+
+Ritkán használjuk a következő változatot: az addott prefixű változók neveit 
+helyettesíti be az \texttt{IFS} változó első karakterével elválasztva:
+\texttt{\$\{!OP*\}}. Például a következő két név fog megjelenni:\\
+\texttt{OPTERR OPTIND}.
+
+A következőkhöz definiáljuk a \texttt{PELDA=almafa123456.txt} változót. A
+\texttt{\$\{NEV/minta/szoveg\}} helyettesítésre szolgál, például:
+
+\begin{VerbExample}
+~ $ echo ${PELDA/a/T}
+Tlmafa123456.txt
+\end{VerbExample}
+
+Ha viszont minden karaktert cserélni szeretnénk, az első perjelet meg kell
+duplázni:
+
+\begin{VerbExample}
+~ $ echo ${PELDA//a/T}
+TlmTfT123456.txt    
+\end{VerbExample}
+
+Ez nem valódi reguláris kifejezés, hanem csupán olyan, amelyet a shell a
+fájlnevekhez használ:
+
+\begin{VerbExample}
+~ $ echo ${PELDA/a*1/K}
+K23456.txt|
+\end{VerbExample}
+
+Változótömböket is használhatunk, ezek elemei kulcs-érték párokként viselkednek,
+tehát beállíthatjuk a tömb indexét is az egyes elemekhez, viszont használhatjuk
+a bash által alapértelmezetten válaszottt indexet is.
+
+Használatuk:
+
+\begin{VerbExample}
+TOMB=()            # üres tömb létrehozása (előző érték törlésével)
+TOMB=("alma"
+      2
+      3
+      "Ez egy elem"
+      T)          # tömb elemeinek felsorolása kulcs megadása nélkül (1)
+TOMB[43]="alma"   # tömb adott elemének megadása (2)
+echo ${TOMB[43]}  # Adott indexű elem kiírása (3)
+echo ${TOMB[@]}   # Összes elem kiírása (4)
+for ertek in ${TOMB[@]}
+do
+   echo $ertek
+done              # Összes elem kiírása (5)
+\end{VerbExample}
+
+Az értékadásra az első eset az ideális, mivel ilyenkor biztosan nincsen ütköző
+kulcs, vagyis biztosan nem írtuk felül egyik korábban beállított értéket sem. Ha
+egy tömb elemeit akarjuk megadnim, használhatjuk a második eset szerinti
+változatot is, ám ekkor ellenőriznünk kell, hogy az adott kulcs még nincsen
+használatban, tehát a teljes tömb megadásakor nem célszerű ezt használnunk. Ám
+egyes szkriptekben, ahol például egy ciklus közepén kell változtatni az értéket,
+már nincs is lehetőségünk másfajta kódot írni. A harmadik eset mutatja, hogyan
+tudunk egy adott indexű elemre hivatkozni, a negyedikben pedig az összes értéket
+ömlesztve kiírni. Amikor ténylegesen felhasználjuk az elemeket, már inkább egy
+for ciklus a célszerű, ahogy az ötödik esetben láthatjuk.
+
+
+% Local Variables:
+% fill-column: 80
+% mode: latex
+% End:

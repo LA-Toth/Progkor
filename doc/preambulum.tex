@@ -1,0 +1,114 @@
+% vim:tw=120:sw=2:enc=utf-8
+
+% csomag opciók
+\def\magyarOptions{frenchspacing=yes,activeprefix=grave}
+
+% csomagok
+\usepackage[utf8]{inputenc}
+\usepackage{t1enc}
+\usepackage[english,magyar]{babel}
+\usepackage[dvips]{graphicx}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+%\usepackage{amsrefs}
+\usepackage{amsmath}
+\usepackage{alltt}
+\usepackage{verbatim}
+\usepackage{booktabs}
+\usepackage{paralist}
+\usepackage{fancyhdr}
+\usepackage{xspace}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% makrók
+\makeatletter
+\def\Ifnopdflatex{\csname @ifundefined\endcsname{pdfcompresslevel}}
+\makeatother
+
+% méretek
+%\addtolength{\voffset}{-1cm}
+\addtolength{\textheight}{2cm}
+\addtolength{\hoffset}{-1.2cm}
+\addtolength{\textwidth}{2.4cm}
+\setlength{\headheight}{16pt}
+
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{9mm}
+\addtolength{\evensidemargin}{-7mm}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\sffamily\thepage}%
+\fancyhead[LO]{\sffamily\sc\nouppercase{\rightmark}}%
+\fancyhead[RE]{\sffamily\sc\nouppercase{\leftmark}}%
+
+
+\fancypagestyle{plain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}}
+
+\newcounter{fejezet}
+\makeatletter
+\renewcommand{\chaptermark}[1]{\markboth{\ifnum \thechapter > 0
+   \ifnum \c@fejezet = 1
+          \thechapter.\ \chaptername.\ %
+	     \fi
+ \fi#1}{}
+}
+
+\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}}
+\makeatother
+
+
+\newcommand{\chaptern}[1]{
+\setcounter{fejezet}{0}%
+\chapter*{#1}%
+\addcontentsline{toc}{chapter}{#1}%
+\chaptermark{#1}%
+}
+
+\newcommand{\chaptery}[1]{
+\setcounter{fejezet}{1}%
+\chapter{#1}%
+}
+
+
+\makeatletter
+\def\cleardoublepage{\clearpage\if@twoside \ifodd\c@page\else
+\hbox{}
+\thispagestyle{empty}
+\newpage
+\if@twocolumn\hbox{}\nepage\fi\fi\fi}
+\makeatother
+
+\clearpage{\thispagestyle{empty}\cleardoublepage}
+\makeatletter
+\newcommand{\elv}{\leavevmode\nobreak-\hskip\z@skip}
+\makeatother
+
+%%%
+% Magyar tipográfiai előírások
+%%%
+
+\baselineskip=0pt
+\parskip=0pt
+
+
+%%%%%%
+
+\newcommand{\xml}{\textsc{xml}\xspace}
+
+\newcommand*{\utbeh}{\hspace*{3mm}}
+
+\newcommand{\ut}[1]{\hspace*{3mm}\mbox{\vspace{2mm}\texttt{#1}\vspace{2mm}}}
+
+\DefineVerbatimEnvironment%
+{VerbExampleNum}{Verbatim}
+{numbers=left,xleftmargin=8mm,xrightmargin=8mm}
+
+\DefineVerbatimEnvironment%
+{VerbExample}{Verbatim}
+{xleftmargin=5mm,xrightmargin=5mm}

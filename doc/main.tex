@@ -1,0 +1,44 @@
+% vim:tw=120:sw=2:enc=utf-8
+\documentclass[a4paper,12pt,titlepage]{book}
+\input{preambulum}
+
+%% \title{Programozási környezet jegyzet}
+%% \author{Tóth László Attila}
+%% \date{2007. június 1.}
+
+%% \addtolength{\oddsidemargin}{9mm}
+%% \addtolength{\evensidemargin}{-7mm}
+
+%% \hyphenation{a-mely-re}
+
+\begin{document}
+
+  \input{elolap2}
+  \pagestyle{fancy}
+
+  \frontmatter
+  \tableofcontents
+  
+  \mainmatter
+  \newpage
+  \input{bevezetes}
+  \input{html}
+  \input{linux}
+  \input{bash}
+  \input{szurok}
+  \input{env-variables}
+  \input{regex}
+  \input{vezerlesi}
+  \input{others}
+  
+  \backmatter
+
+  %\pagestyle{plain}
+  \input{bib2}
+    
+\end{document}
+
+% Local Variables:
+% fill-column: 120
+% mode: latex
+% End:

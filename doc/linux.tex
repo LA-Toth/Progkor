@@ -1,0 +1,125 @@
+\chapter{A Linux}%
+\label{cha:linux}
+
+A Linux egy Unix-szerű operációs rendszer (OS), vagyis sok mindenben hasonlít
+mind a használat, mind a programozás tekintetében. E fejezet az eredetét és az
+alapvető működését írja le.
+
+
+\section{A Linux eredete}
+
+A Linuxot alapvetően nagy tudású hackerek készítik, azonban bárki hozzájárulhat
+jobbá tételének. A (mai) hackereknek saját kultúrájuk van, amelynek története az
+1960-as évekig nyúlnak vissza ekkor kapott ugyanis az \textsc{mit}
+(Massachusetts Institute of Technology) vasútmodellező köre egy
+\textsc{pdp-1}-es gépet, \cite{bazar,bazar-web}, amelyhez programozási
+eszközöket, nyelvet, sőt, teljes kultúrát alakíttak ki. Ebből jött létre az
+egyetem mesterséges intelligencia laborja, amely a 80-as évek vezető
+MI-központja volt.
+
+A következő jelentős mérföldkő az ARPAnet kialakításának éve, 1969 volt. E
+hálózat eredetileg katonai célokra szolgált, tesztkörnyezetként (amelynek háború
+esetén is működnie kellett), mely egész földrészeken átívelt, idővel azonban
+rácsatlakoztak az egyetemek is. Az információ most már messzebbre eljuthatott,
+ezáltal az \textsc{mit}-beli kutatóközpont hatása is megnőtt.
+
+A \textsc{pdp} sorozat 10-es számú gépe '67-től 15 éven keresztül meghatározó
+volt, és bár készült hozzá operációs rendszer is, az MIT hackerei saját
+változhatot készítettek, amely az \textsc{its} (Incompatible Time-Sharing System,
+Inkompatibilis Időosztásos Rendszer) nevet kapta, számos újítást
+tartalmazott. És valóban jól működött. Alapvetően assemblyben íródott, tehát a
+kód csak ezen a gépen volt futtatható. Nemegy program \texttt{lisp}-ben íródott,
+a legismertebb a ma is használatos \textsc{emacs} programszerkesztő.
+
+
+Szintén '69-hez kötődik egy másik esemény is. Ken Thompson, a Bell-Laps egyik
+hackere megalkotta a Unixot. Eredetileg a Multics nevű OS fejlesztésén
+dolgozott, amelyen olyan újításokkal kísérletezett, amelyek elfednék az
+operációs rendszer bonyolultságát a felhasználók elől. A rendszer azonban
+kezdett túl bonyolulttá válni, így a Bell Labs elállt a piacra dobásától. Ennek
+nyomán Thompson nekiállt egy újabb rendszer írni az eddigi ötletei
+alapján. Ebben nyújtott segítésget Dennis Rithcie, aki egy új nyelvet dolgozott
+ki a kezdeti Unix rendszr számára, a C-t.
+
+Míg eddig minden OS assembly-ben íródott, a Unix már nem, ugyanis már nem volt
+fontos a kód adott hardverre történő optimalizálása, s az akkori
+fordítóprogramok mellett egy teljes operációs rendszer is megírhatóvá vált egy
+magasabb szintű nyelven, például C-ben is.
+
+A C gépfüggetlen volt, így 1978-ra számos géptípusra sikerült átültetni a
+Unixot. A nyelv is egyszerű, könnyen fejben tartható volt sok egyéb nyelvtől
+eltérően.
+
+A Unix még egy előnnyel rendselkezett: beépítetten tartalmazta az
+\texttt{uucp}-t, amely kis sebesságű, megbízhatatlan kapcsolatot tett lehetővé
+telefonvonal felhasználásával.
+
+A '80-as évek elején Richard R. Stallman -- akit bejelentkezési azonosítójáról
+`rms'-ként is ismerhetünk -- megalapította a Free Software Foundation-t
+(\textsc{fsf}-t). A Unix már grafikus felületet is adott, az X Window System-et,
+amelyet gyakran csak X-nek nevezünk. A '90-es évek ben az olcsó, nagy
+teljesítményű számítógépek terjedtek el.
+
+Bár a hardver fejlődött, nem volt hozzá olcsó szoftver, ezért az
+\textsc{fsf}-nél egy Unix rendszermag (\emph{kernel}), a \textsc{hurd}
+fejlesztésébe kezdtek, amely azonban nem folytatódott, egészen 1996-ig állt.
+
+Az \textsc{fsf} azonban adott mást: tömérdek ingyenes, nyílt forráskódú
+programot, amelyeket \textsc{gnu} programoknak neveztek el. A \textsc{gnu} egy
+betűszó, a `\textsc{GNU} is Not Unix' rövidítése. A be nem fejezett
+rendszermaggal együtt a \textsc{gnu/hurd} elnevezést kapta.
+
+Ezekkel az eszközökkel állt neki egy finn egyetemista -- Linus Torvalds -- egy
+rendszermag elkészítésének. 1991 nyarára sikerült egy működő
+lemezmeghajtó-vezérlő kódot írnia. E kernel a Linux nevet kapta, és a
+felhasználói programokkal együtt gyakran  GNU/Linux-nak nevezik, bár ez ma már
+nem pontos, hiszen számtalan nem \texttt{gnu} program is van rajta.
+
+Ugyancsak ezekben az időkben portolták az egyik Unix változatot, a
+\textsc{bsd}-t -- melyet a Berkeley egyetemen készítettek, és a név a Berkeley
+Software Distribution rövidítése -- 386-os gépekre.
+
+A Linuxot igazán sikereressé az Internet és a világháló elterjedése tette.
+
+\section{A fájlrendszer}
+A Linux fájlrendszer egyetlen, összefüggő fából áll, a merevlemez különböző
+partícióit ennek a fának valamely csúcsára lehet rácsatolni, feltéve ha az adott
+csúcs egy könyvtár. Néhány esetben még az is elvárás, hogy a könyvtár üres
+legyen. 
+
+A File System Hierarcy Standard\acite{fhs} (\textsc{fhs}) tartalmazza, hogy mely
+könyvtáraknak mi a szerepük, ezek közül sok opcionálos, vagy csupán a régebbi
+rendszerekkel való kompatibilitást hivatott biztosítani. néhány példát
+\aref{tab:linux-fs}.\ táblázatban láthatunk.
+
+
+\begin{table}%
+\center%
+\begin{tabular}{@{}ll@{}}\toprule
+Könyvtár & Funkció\\\midrule
+/boot & A Linux kernelét tartalmazza, induláskor használt\\
+/bin  & A rendszer indulásakor is használt programok\\
+/dev  & Eszközfájlok a hardverek kezeléséhez\\
+/root & A root felhasználó home könyvtára\\
+/sbin & Rendszerinduláskor is használt programok a root számára\\
+/usr  & A felhasználói programok és azok adatai\\
+/usr/bin & Mindenki számára elérhető programok, melyek\\
+& nem szükségesek a rendszer elindulásakor
+\\\bottomrule
+\end{tabular}
+  \caption{Néhány könyvtár és azok funkciója}
+  \label{tab:linux-fs}
+\end{table}
+
+%\section{A Linux rendszer elindulása}
+
+
+%\section{A legfontosabb beállítások}
+
+
+%\section{Használat}
+
+% Local Variables:
+% fill-column: 80
+% mode: latex
+% End:

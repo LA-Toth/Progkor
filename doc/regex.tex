@@ -1,0 +1,375 @@
+\chapter{Reguláris kifejezések}%
+\label{cha:regex}
+
+A reguláris kifejezésekkel (regular expressions, regex)
+valamilyen szöveg keresésekor vagy helyettesítésekor
+találkozhatunk. Ha egy szöveget (mintát) keresünk egy másik szövegben, ezt
+mintaillesztésnek nevezzük. A helyettesítéskor az illeszkető mintát cseréljük le
+egy adott szövegre, mely tartalmazhatja a minta egyes részeit, vagy akár a
+teljes mintát is.
+
+A reguláris kifejezések alatt a modern változatot értjük (lásd a regex(7)
+kézikönyvlapot, melynek egy ``nyersfordítása''
+\aref{sec:regex-man7}.\ alfejezetben olvasható). A régi, elavult
+változatban például a zárójelek, plusz jel még normál karakternek számít, így
+használja a \texttt{sed} program is.
+
+
+\section{A reguláris kifejezések szerkezete: regex(7) kézikönyvlap}
+\label{sec:regex-man7}
+
+\emph{Ezen alfejezet a \emph{regex(7)} kézikönyvlap fordítása, amely itt-ott
+ kibővült a más lapokon található információkkal.}
+
+Egy (modern) reguláris kifejezés egy vagy több nem üres ágra (branch),
+osztható, melyek között függőleges vonal (a `|' karakter, ``pipe''
+karakter\footnote{Azért ``pipe'', mert ezzel lehet felépíteni a
+parancsértelmezőben a több parancsból álló ``csővezetéket'', ami angolul
+``pipe-line''}) áll. A kifejezés (vagy minta) akkor illeszkedik az adott
+szövegre, ha az ágak valamelyike illeszkedik rá. Az ágakat a felsorolásuk
+sorrendjében vizsgálja az adott program.
+
+Egy ág több darabra (piece) oszlik, mely illeszkedik az elsőre, majd a
+másodikra, stb. Egy darab több atomra osztható, melyek bármelyikét követheti
+pontosan egy darab `*', `+', `?' vagy határokat jelölő kifejezés.
+
+Egy atom utáni csillag (`*') karakter illeszkedik nulla vagy több (az adott)
+atomból álló sorozatra. Ha pluszjel (`+') áll, akkor egy vagy több egymás utáni
+(ismétlődő) illeszkedést jelöl. A kérdőjel (`?') nulla vagy egy illeszkedést
+jelöl.
+
+Egy határokat jelölő kifejezés (azaz intervallumot jelölő kifejezés) nyitó
+kapcsoszárójellel (`\{') kezdődik, amit egy nemnegatív egész szám követhet, ami
+után állhat egy vessző, illetve a vessző után egy másik nemnegatív szám, végül a
+zárójel párja (`\}'). Tehát röviden $\{n,m\}$ alakű melyből bármelyik szám
+elhagyható. Továbbá a $0 \le n, m \le 255$ egyenlőtlenségnek teljesülnie kell. A
+\{n\} alak pontosan $n$ ismétlést jelent az $\{n,\}$ alak meg legalább $n$
+ismétlődést jelöl.
+
+Egy atom lehet egy reguláris kifejezés, mely körül zárójelpár, (`()'-ból) áll
+(ez a regex egy illeszkedésére - illeszkedik), vagy egy üres `()', (a nulla
+hosszúságú sztringet, null stringet)jelzi, vagy szögletes zárójeles kifejezés
+(bracket expression) (lásd lejjebb), egy `.' (pont, mely pontosan egy, bármilyen
+karaktert jelöl), egy `\^{}', (mely egy nullszringet jelöl a sor elején), egy
+'\$' (mely a sorvégi nullsztringet jelöli), egy `\textbackslash' amelyet a
+`\^{}.[\$()|*+?\textbackslash' karaktererek egyike követ (úgy illeszkedik az
+adott karakterre, mintha az nem lenne speciális karakter, hanem a szöveg része
+lenne), egy `\textbackslash' bármely egyéb karakterel együtt (ami az adott
+karakterre illeszkedve, mintha a `\textbackslash' ott sem lenne), vagy bármely
+más, nem speciális karakter (az adott karakterre illeszkedik). Továbbá ha egy
+`\{' után nem áll számjegy, akkor a `\{' egy közönséges karakternek számít, nem
+pedig egy intervallum elejét jelöli. Nem szabad egy regex végére `\textbackslash'-et
+tenni.
+
+Egy szögletes zárójeles kifejezés karakterek sorozata, mely körül `[]'
+áll. Általában ez a benne álló karakterek valamelyikére illeszkedik (de lásd
+alább). Ha a lista a `\^{}' karakterrel kezdődik, akkor bármely, a listában fel
+nem sorolt karakterre illeszkedik (de lásd alább). Ha két karakter között `-'
+áll, akkor az a két karakter között álló karakaterek sorozatának rövidítése, a
+két adott karaktert is beleértve. Tehát például a `[0-9]' az \textsc{ascii}
+kódtábla szerint bármely tizedes számra illeszkedik. A `[a-c-e]' forma viszont
+illegális, mivel nem megengedett a tartományok végpontjainak megosztása. Ezen
+tartományok erősen környezetfüggőek, úgyhogy minden
+(portolható\footnote{program, több eltérő rendszeren is futtatni kívánt, és
+lefordítható, futtatható, valamint minden rendszeren azonos módon viselkedik})
+programnak kerülnie kell ezeket.
+
+Egy közönséges `]' karakter jelölése úgy lehetséges, ha a lista elején áll (egy
+esetleges `\^{}' karakter után). Egy közönséges `-' jelölése a listában annak
+valamely szélére helyezésével tehető meg, vagy pedig akkor, ha tartomány
+végpontjaként adjuk meg. Ha egy tartomány kezdőpontjaként kell szerepelnie,
+akkor `[.' és `.]' közé zárva megtehetjük ezt. Ezen néhány kivételtől és a
+következő bekezdésben szerepelőktől eltekintve az összes karakter, például a
+`\textbackslash' is elveszti speciális jelentését egy bracket expression-ban.
+
+% FIXME 
+Egy ilyen zárójeles kifejezésben egy, vagy több, a `[.' és `.]' zárójelpár
+között szereplő karakter olyan, mintha egyetlen karakter lenne a bracket
+expression-ben. Ha több karakterből áll, akkor azok sorozatára
+illeszkedik. Tehát például a `[[.ch.]]*c' RE (regex) a chchchcc' első 5
+karakterére illeszkedik. Megadható ekvivalencia-osztály is,
+lásd regex(7).
+
+% TODO: befejezni
+
+\section{A reguláris kifejezések alapjai és a grep}
+
+\Aref{sec:regex-man7}.\ fejezetben a szabályos kifejezések (regex) pontos
+definíciója szerepel. A következőkben néhány példán keresztül láthatjuk
+ugyanezt.
+
+Vegyük a legegyszerűbb mintát, például az `almafa' karaktersorozatot. Már ez is
+egy reguláris kifejezés, hiszen azt mondja, hogy egymás után szerepelnek az `a',
+`l', `m' stb.\ karakterek, mindegyik pontosan egyszer. Ha kicsit változtatunk
+rajta, példáulaz `almaf.' változatot adjuk meg, akkor az olyan szövegre
+illeszkedik, amely `almaf' karaktereket egymás után, ebben a sorrendben
+tartalmazza, és utána van még egy karakter, amely bármelyik lehet. Az esetleges
+továbbiakkal nem foglalkozunk, lehet, hogy vannak, azonban lehet, hogy
+nincsenek, ha ez a szöveg vége. Tehát a pont (`.') egyetlen karaktert jelöl,
+amire semmiféle megkötés nincsen.
+
+Tegyük fel, hogy az ``.sh'' végződésű állományokban keresünk bizonyos
+függvényeket (szintaxisa: \texttt{function név()}, ahol a function nem
+kötelező). A következő néhány példa erről szól.
+
+Először keressük a ``main'' nevű függvényt:
+
+\begin{VerbExample}
+grep 'main()' *.sh
+\end{VerbExample}
+
+\noindent de nem találunk ilyet, mert a zárójel előtt van számjegy is (a név
+legyen például 'main1'). A számjegy utáni
+résszel nem akarunk foglalkozni, így a zárójelekkel sem. Ekkor a minta a
+következő lesz: `main.'. Ez sajnos még nem tökéletes, hiszen a main utáni
+zárójelre is illeszkedik, a számjegyeket valahogy jelölnünk kell. Itt is működik
+a bash-ben meglévő intervallum (karakterhalmaz) megadása:
+
+\begin{VerbExample}
+grep 'main[0-9]' *.sh
+\end{VerbExample}
+
+\noindent ami már megfelelő. De hogyan is működik ez a megadás? A szögletes
+zárójelpár
+között egy vagy több karakternek kell szerepelnie, ha egymás utáni az adott
+kódolás esetén, akkor lehet rövidíteni: a legelső és az utolsó közötti elemek
+helyett egyetlen kötőjel (mínuszjel) elegendő. Persze nem mindig szükséges,
+például `[abc]' helyett írható `[a-c]', mely olvashatóbb, de nem rövidít semmit
+sem. Lehet több intervallum is benne, például a 'g' nélküli összes angol
+kisbetű: `[a-fh-z]'.
+
+Ha a példában a számjegy állhat hátrébb is, akkor jelezni kell, hogy előtte
+szerepelhet más karakter is, de nem kötelező lennie. Ha az adott karakter mögött
+csillagot (`*') van, akkor e karakter bárhányszor (0-szor vagy többször)
+ismétlődhet.
+
+\begin{VerbExample}
+ grep 'main.*[0-9]' *.sh
+\end{VerbExample}
+
+Sajnos ebben benne van  a zárójel is. Ha a függvény törzse a nevével egy sorban
+van, akkor hibázhat. Így jobb megoldás szűkíteni a neveket:
+
+\begin{VerbExample}
+grep 'main[a-zA-Z_]*[0-9]' *.sh    
+\end{VerbExample}
+
+Ha bizonyos karaktereket nem szeretnénk megengedni, rajtuk kívül azonban
+mindegyiket, akkor is hasonló jelölést kell alkalmaznunk. Például a nem
+kisbetűkre: `[\^{}a-z]'. Az egyetlen eltérés, hogy az elején van egy `\^{}', ami
+a tagadást jelenti.
+
+A `]' és `-' karakterek megadása úgy lehetséges, hogy az első a legelső karakter
+az esetlegesen előforduló `\^{}' karakter után, a másik pedig az utolsó,
+például: `[\^{}]abe-h-]' vagy `[ab-]'. 
+
+Ezek alapján egyértelmű a következő példa jelentése:\\
+
+\begin{VerbExample}
+grep 'main[^][().{}]*[0-9]' *.sh
+\end{VerbExample}
+
+\noindent bár elsőre félreérthető, hiszen A `][' rész is a felsorolt karakterek
+között van.
+
+Nem csak a `*' használható az ismétlődés jelölésére, hanem a kérdőjel (`?') és a
+pluszjel (`+') is. Az előbbi azt jelenti, hogy az előtte álló karakter (vagy
+más, lásd később) \emph{legfeljebb} egy példányban fordul elő, míg az utóbbi, a
+`+', pedig azt, hogy \emph{legalább} egyszer előfordul, azaz
+ismétlődik. Lényeges, hogy a régi reguláris kifejezések (basic regex) számára a
+`+' és a gömbölyű zárójelek: `(' és `)' is egyszerű karakterek, a modern (vagy
+kiterjesztett) reguláris kifejezésekben viszont már speciális jelentéssel
+bírnak. A \texttt{grep} a régit, az \texttt{egrep} pedig a modern
+(\emph{e}xtended) változatot használja. Persze mindkettő ismeri a másikat is,
+csak akkor a kérdéses karakterek előtt kell egy backslash
+(`\textbackslash'). Következzék néhány példa, melyekben a `main' után legfeljebb
+egy (első példa), illetve legalább egy (többi) számjegy állhat, melyet
+zárójelpár követ.
+
+\begin{VerbExample}
+grep 'main[0-9]?()' *.sh
+grep 'main[0-9]\+()' *.sh
+egrep 'main[0-9]+\(\)' *.sh    
+\end{VerbExample}
+
+Az \texttt{egrep} esetén azért kellett a backlash (`\textbackslash'), mert az
+megváltoztatja az utána álló karakter jelentését (azaz ``escape karakternek''
+számít). Ilyen létezik a shell esetén is, például a \verb|$'\n'| az újsor
+karaktert jelöli, a szóköz előtt álló `\' pedig a szóközt a fájlnévben, vagyis a
+bash nem tekinti paraméter-elválasztó karakternek.  A zárójelek pedig
+csoportosításra szolgálnak, például az ``alma''
+karaktersorozat ismétlődésének jelölése a következő: `(alma)+'. Ha még
+hozzávesszük a pipe karaktert (`|') is, akkor a zárójelen belül felsorolhatunk
+lehetőségeket is, például az ``alma'', vagy pedig a ``körte'' ismétlődik:
+`(alma|körte)+'.
+
+Térjünk most vissza \aref{sec:filters-grep}.\ fejezetben mutatott példához,
+amelyben azon felhasználók azonosítóit irattuk ki, akik \texttt{bash}-t
+használnak:
+
+\begin{VerbExample}
+grep /bash$ /etc/passwd | cut -f1 -d:
+\end{VerbExample}
+
+\noindent Irassuk ki azokat is, akik akik az \texttt{sh}-t használják:
+
+\begin{VerbExample}
+egrep '/(bash|sh)$' /etc/passwd | cut -f1 -d:
+\end{VerbExample}
+
+\noindent  Mivel a végződés azonos, jelölhetjük úgy is, hogy a ``ba'' karakterek
+legfeljebb egyszer szerepelnek:
+
+\begin{VerbExample}
+egrep '/(ba)?sh$' /etc/passwd | cut -f1 -d:
+\end{VerbExample}
+
+A `\$' nem feltétlenül a minta utolsó karaktere, pusztán a sor (vagy a szöveg)
+végét jelzi, arra illeszkedik. Ugyanez igaz a szöveg elejére illeszkedő `\^{}'
+karakterre is. Például a sor végén álló ``bash'' szót tartalmazó sorokat
+szeretnénk kiírni, de előfordulhat, hogy a bash után van még perjel (`/') is, és
+ezek a sorok is érdekesek. Az viszont már nem fontos, hogy a perjel után mi
+áll:
+
+\begin{VerbExample}
+grep '/bash($|/)' /etc/passwd    
+\end{VerbExample}
+
+\subsection{Karakterosztályok}
+
+A reguláris kifejezések esetén lehet karakterosztályokat is használni, például a
+``lower'' a kisbetűknek felel meg. Maradjunk egy kicsit ennél az
+osztálynál. Angol nyelvi beállításnál ez megegyezik az ``a-z'' intervallummal,
+ám magyar környezetben ebben már benne vannak az ékezetes betűink is. Hogy lehet
+használni: `[:lower:]' megegyezik az `a-z' kiírásával (angol változat esetén),
+ha viszont rendesen `[a-z]'-t szeretnén kírni, akkor már kell a külső
+zárójelpár: `[[:lower:]]'. Ez mindenképpen szükséges, hiszen tegyük fel, hogy a
+nyelvi beállításoknak megfelelő kisbetűkön felül meg szeretnénk engedni az `A'
+és a `B' nagybetűket is, melyet az alábbi módon jelölhetünk: `[[:lower:]AB]'.
+
+A nyelvi beállításokat az \texttt{LC\_ALL} vagy \texttt{LC\_CTYPE} változókkal
+definiálhatjuk, erre példa a ``C'', ``POSIX'', vagy éppen magyar nyelv esetén a
+``hu\_HU'' illetve ``hu\_HU.UTF-8''.
+
+Van még két hasonló karakterosztály, az ``alpha'', mely az összes betűt
+jelöli, az ``upper'', mely a nagybetűket, és igaz a következő: az `[[:alpha:]]'
+ugyanazt a karakterhalmazt jelenti, mint a `[[:lower:][:upper:]]'. Ez igaz az
+angol és a magyar nyelvi beállítások esetén, de egyes nyelveknél előfordulhat
+olyan betű, ami sem nem nagy, sem nem kicsi.
+
+Ha még hozzávesszük a számjegyeket is, amit a ``digit'' karakterosztály jelöl,
+akkor a `[[:digit:][:alpha:]]' jelöléssel az összes betűt és számjegyet
+megadtuk. Azonban ez is egy gyakran használt kifejezés, ezért e csoportra is van
+egy önálló osztály, az ``alnum'' (alphanumeric characters), így egyszerűbb és
+olvashatóbb is ezt írni: `[[:alnum:]]'.
+
+A ``digit'' a decimális számokat jelöli, azonban a hexadecimális számjegyekre is
+van egy jelölés, az ``xdigit''. Tehát a következők azonosak: `[0-9a-fA-F]',
+`[[:xdigit:]]' stb.
+
+A szavak közt előforduló karakterekre (szóköz, tabulátorkarakter, újsor karakter
+stb.) is van két karakterosztály. Az egyik a ``blank'', amely csupán a szóközt
+és a tabot tartalmazza, azonban a ``space'' többet. A pontos jelentése csak a
+``C'' és ``POSIX'' környezetben rögzített, ekkor az újsor (\verb|\n|), a
+kocsi-vissza (carriage return, sor elejére ugrás, \verb|\r|), a függőleges tab
+(\verb|\v|), és a form-feed (\verb|\f|) karakterek is benne vannak.
+
+Hogyan lehet eldönteni, hogy valamilyen szöveg egyetlen számot tartalmaz? Tegyük
+föl, hogy a ``SZAM'' változó tartalmazza ezt és a \texttt{grep} paranccsal
+ellenőrizzük. Elegendő a státuszát megtekinteni, ezért használhatjuk a
+\texttt{-q} opciót, aminek hatására nem ír ki semmit sem, viszont 0 státusszal
+jelzi, ha illeszkedik a minta a szövegre, nem nullával, ha nem (azaz
+sikertelenül futott le a program).
+
+Néhány lehetséges megoldás nemnegatív egész számok esetén:
+
+\begin{VerbExample}
+echo "$SZAM" | egrep -q '^(0|[1-9][[:digit:]]*)$'
+echo "$SZAM" | egrep -q '^(0|[1-9][0-9]*)$'
+\end{VerbExample}
+
+Negatív számok esetén a nullának nem lehet előjele, de a többinek igen: egy
+legfeljebb egyszer előforduló negatív előjel is szerepel:
+\begin{VerbExample}
+echo "$SZAM" | egrep -q '^(0|-?[1-9][[:digit:]]*)$'    
+\end{VerbExample}
+
+Egyes esetekben a pozitív számoknak is lehet előjelük. A kötőjel (negatív
+előjel) a felsorolásban az utolsó, hiszen így nincs speciális jelentése\ldots
+
+\begin{VerbExample}
+echo "$SZAM" | egrep -q '^(0|[+-]?[1-9][[:digit:]]*)$'
+\end{VerbExample}
+
+Most engedjük meg a lebegőpontos számokat is, ahol az egészrész végén van egy
+pont (`.') karakter, majd utána nem csupa nulla számjegyekből álló sorozat
+szerepel, így a végét kell bővíteni:
+
+\begin{VerbExample}
+echo "$SZAM" |
+   egrep -q '^(0|[+-]?[1-9][[:digit:]]*)\.(0|[[:digit:]]*[1-9])$
+\end{VerbExample}
+
+Ezt lehetne tovább bővíteni, azonban ez alapján már könnyen definiálható például
+az az eset, amikor egész értéknél nem szükséges a tizedesjegy és tizedespont
+megadása, valamint egynél kisebb abszolútértékű szám esetén nem kell a
+tizedespont előtt álló 0 sem.
+
+
+
+\section{A reguláris kifejezések és a sed}
+\label{sec:regex-sed}
+
+A \texttt{sed} esetén is ugyanolyan reguláris kifejezéseket lehet használni,
+mint a \texttt{grep} esetén. A modern regex a \texttt{-r} opcióval használható,
+érdemes ezt mindig megadni.
+
+A karakterhelyettesítést (\texttt{y/lista1/lista2/}) nem érinti, viszont a
+szöveghelyettesítést már igen. Sőt, a \texttt{sed} alkalmas bizonyos sorokra más
+műveletet végrehajtani, mint a többire, szkriptelhető.
+
+ A zárójelezett kifejezésekre lehet hivatkozni,
+legalábbis az első kilencre a következő módon: \verb|\N|, ahol \verb|N| jelzi,
+hogy az zárójelezett kifejezéshez hanyadik nyitózárójel tartozik. A
+`(a(b(c)d(e)))' kifejezésben az `e' körül a negyedik zárójelpár áll.
+
+Például az ugyanazzal a három karakterrel kezdődő és végződő sorokból
+elhagyhatjuk ezt a részt. Csak a középső marad meg:
+\begin{VerbExample}
+sed -r 's/^(...)(.*)\1$/\2/'
+\end{VerbExample}
+
+\noindent az elejét elhagyjuk, ekkor másképp kell zárójelezni:
+
+\begin{VerbExample}
+sed -r 's/^(...)(.*\1)$/\2/'
+\end{VerbExample}
+most a végét hagyjuk el, az első három karaktert már a második zárójelpár
+tartalmazza:
+
+\begin{VerbExample}
+sed -r 's/^((...).*)\2)$/\1/'
+\end{VerbExample}
+
+Ha minden harmadik karakter után egy szóközt szeretnénk beszúrni, akkor egy
+lehetőség az alábbi:
+
+\begin{VerbExample}
+sed -r 's/(...)/\1 /'
+\end{VerbExample}
+
+\noindent de ez nem elegáns, mivel felesleges zárójelezni. Sőt, alap reguláris
+kifejezéssel is működik:
+%\utbeh\verb|sed -r 's/.../& /g'|\\
+
+\begin{VerbExample}
+sed 's/.../& /g'
+\end{VerbExample}
+
+Itt az \verb|&| karakter a teljes, mintára illeszkedő szöveget jelöli, jelen
+esetben ez 3 karakter hosszú.
+
+% Local Variables:
+% fill-column: 80
+% mode: latex
+% End:

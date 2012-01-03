@@ -1,0 +1,452 @@
+\chapter{Vezérlési szerkezetek}%
+\label{cha:vez-szerk}
+
+Egy shell szkript a programokhoz hasonlóan vezérlési szerkezetekből áll,
+melyeknek három alapvető változata van, a szekvencia, a ciklus és az
+elágazás, ezek mindegyike egy-egy összetett utasítás.
+
+Egyes utasításokat összefogva külön is definiálhatunk, melyek így egy
+függvényt alkotnak, és a szkript bármely pontján meghívhatjuk e függvényt,
+mintha annak utasításai az adott helyen lennének (vagyis úgy viselkedik, mint
+bármely program).
+
+Először tekintsük a szekvenciát, amely utasítások egymásutánját jelenti. Amint
+az egyik utasítás (program) végetért, elindulhat a következő, ám egyszerre
+mindig csak egyetlen egy fut. Az előbb futó program hatása érvényesül a később
+futónál, például létrehoz egy fájlt, vagy megváltoztat egy változót, akkor
+mindkét változtatás ``látszik'' a későbbinél\footnote{A változó módosítása csak
+akkor látszik, ha az első utasítás a bash része volt, és nem állt egy
+alshellben.}.
+
+A szekvenciát alkotó utasításokat a pontosvessző (';') vagy pedig az újsor
+karakter választja el. Amennyiben minden utasítás külön sorban van, akkor nem
+szükséges kitenni a pontosvesszőt az utasítások végére, bár ki lehet.
+
+Az utasítások után állhat másik karakter is, az ``és'' (ampersand, '\&'), amely
+az előtte álló utasítást a háttérbe küldi, vagyis a parancsértelmezővel
+\emph{párhuzamosan} fut, ez azonban már nem szekvencia!
+
+Egyetlen, összetett  utasításnak tekinthető a csővezeték is, ahol a cső ('|')
+karakterrel elválasztva szerepelnek a programok -- valójában szintén utasítások
+--, amelyről \aref{cha:szűrők}.\ fejezetben volt szó.
+
+Az elágazás és a ciklus annyiban hasonló, hogy mindkettő esetén meg kell adnunk
+egy vagy több feltételt, amelynek (nem) teljesülése esetén futnak le bizonyos
+utasítások. Egy feltétel mindig valamilyen utasítás (program), amelynek státusza
+dönti el az igazságértéket. Ha a státusz nulla, akkor a feltétel igaz, ugyanis a
+program sikeresen lefutott. A nem nulla érték valamilyen hibát jelez, ezért ez a
+hamis állapotot jelzi.
+
+\section{Feltételek}
+
+A feltétel ellenőrzése mindig valamely utasítás státuszának 0-val egyezőségét
+jelenti. Ez lehet egy program, de lehet ``hagyományos értelemben vett''
+összehasonlítás is, például  $i \leqq 10$ vagy éppen \texttt{A =
+  "almafa"}. Valójában ezen utóbbiakat is egy program használatával
+vizsgálhatjuk meg, az újabb bash változatok viszont már ezt beépített
+parancsként tartalmazzák (azonos név, azonos funkciók és használat mellett).
+
+Kétféle elnevezés van rá, az egyik a \texttt{test} (eredetileg
+\texttt{/bin/test}), a másik pedig a szögletes zárójel, `\texttt{[}'. Ezen
+utóbbi egy symlink a \texttt{test}-re a \texttt{/bin} könyvtárban, valamint
+azonos jelentésű beépített parancs is.
+
+Amikor a `\texttt{[}' változatot használjuk, akkor meg kell adnunk a csukó
+zárójelet ('\texttt{]}') is a végén. Tehát a következő két forma teljesen azonos
+jelentést hordoz:
+
+\begin{VerbExample}
+test kifejezés
+[ kifejezés ]
+\end{VerbExample}
+
+Az előző példa alapján az $i \le 10$ összehasonlítás a \texttt{test} paranccsal
+két alakjával a következő:
+
+\begin{VerbExample}
+test  $i -lt 10
+[  $i -lt 10 ]
+\end{VerbExample}
+
+A kifejezés lehet összehasonlítás, valamint a fájlrendszer valamely részének
+tulajdonságát ellenőrző, illetve sztringek hoszzát vizsgáló kifejezés
+is. Először tekintsük meg az összehasonlításokat, melyeknek szintén két
+változata van, az egyik matematikai összehasonlítást jelent, a másik pedig
+sztringekre vonatkozót.
+
+A matematikai alakokat (ahol \texttt{A} is és \texttt{B} is lehet számkonstans,
+vagy éppen egy változóbehelyettesítés is, például \verb|$i|)
+\aref{table:vez-feltetelek}.\ táblázat első része tartalmazza.
+ 
+\begin{table}[tbh]\center
+\center\begin{tabular}{ll}\toprule
+Kód & Jelentés\\\midrule
+\texttt{A -lt B} & \texttt{A $<$  B}\\
+\texttt{A -le B} & \texttt{A $\leq$  B}\\
+\texttt{A -eq B} & \texttt{A $=$  B}\\
+\texttt{A -ne B} & \texttt{A $\neq$  B}\\
+\texttt{A -ge B} & \texttt{A $\geq$  B}\\
+\texttt{A -gt B} & \texttt{A $>$  B}\\\midrule
+\texttt{S1 < S2} & Igaz, ha \texttt{S1} lexikografikusan kisebb, mint
+\texttt{S2}\\
+\texttt{S1 > S2} & Igaz, ha \texttt{S1} lexikografikusan nagyobb, mint
+\texttt{S2}\\
+\texttt{S1 != S2} & Igaz, ha a két string nem egyenlő\\
+\texttt{S1 == S2} & Igaz, ha azonosak\\
+\texttt{S1 = S2} & Igaz, ha azonosak (\textsc{posix} kompatibilis jelölésmód)\\
+\texttt{-z str} & Igaz, ha \texttt{str} hossza 0\\
+\texttt{str} & vagy:\\
+\texttt{-n str} & Igaz, ha \texttt{str} nem nulla\\\midrule
+\texttt{-e file} & Igaz, ha a \texttt{file} létezik\\
+\texttt{-f file} & Igaz, ha a \texttt{file} reguláris fájl\\
+\texttt{-d file} & Igaz, ha a \texttt{file} könyvtár\\
+\texttt{-L file} & Igaz, ha a \texttt{file} symlink\\
+\texttt{-b file} & Igaz, ha a \texttt{file} blokkos eszköz\\
+\texttt{-c file} & Igaz, ha a \texttt{file} karakteres eszköz \\
+\texttt{-r file} & Igaz, ha a \texttt{file} olvasható\\
+\texttt{-w file} & Igaz, ha a \texttt{file} írható\\
+\texttt{-x file} & Igaz, ha a \texttt{file} futtatható\\
+\texttt{file1 -nt file2} & Igaz, ha a \texttt{file1} újabb,
+ mint \texttt{file2}\\
+\texttt{file1 -ot file2} & Igaz, ha a \texttt{file1} régebbi,
+ mint \texttt{file2}\\
+
+\bottomrule
+\end{tabular}
+ \caption{Feltételek}
+  \label{table:vez-feltetelek}
+\end{table}
+
+
+A sztringek esetén az összehasonlítás lexikografikus rendezés szerint történik,
+amelyik előrébb szerepel, az a ``kisebb''. Ez a rendezés függ a nyelvi
+beállításoktól. Sőt, sztringek esetén a hossz nulla vagy nem nulla voltát is
+lehet ellenőrizni. A lehetőségeket \aref{table:vez-feltetelek}.\ táblázat
+második részében láthatjuk.
+
+Az utolsó részben a fájlokra és könyvtárakra vonatkozó legtöbb vizsgálat
+szerepel, például megvizsgálhatjuk, hogy egy adott könyvtárbejegyzés (reguláris)
+fájl-e, vagy olvasható-e, vagy éppen azt, hogy két fájl közül melyik az újabb:
+
+\begin{VerbExample}
+[ $F1 -nt $F2]
+\end{VerbExample}
+
+\noindent státusza 0, ha az \texttt{\$F1} az újabb.
+
+
+\section{Elágazás}
+
+Az elágazás egy vagy több feltételből áll, valamint az egyes feltételekhez
+tartozó utasításlistákból. Ha valamelyik feltétel teljesül, akkor a hozzá
+tartozó listában lévő utasítások fognak lefutni. Az első feltételt kötelező
+megadni, valamint a hozzá tartozó utasításokat is. Amennyiben nem teljesül a
+feltétel, akkor egy másik utasítássorozat is szerepelhet, amely ekkor fut le.
+A legegyszerűbb változat tehát a következő (egy feltétel + utasítások):
+
+\begin{VerbExample}
+if feltétel
+then
+    utasítások
+fi   
+\end{VerbExample}
+
+\noindent Amennyiben egyetlen sorba szeretnénk írni, akkor nem újsor karakter,
+hanem pontosvessző kerül az egyes részek közé:
+
+\begin{VerbExample}
+if feltétel; then utasítások; fi
+\end{VerbExample}
+
+\noindent Az elágazás mindig az \texttt{if} kulcsszóval kezdődik, és a
+\texttt{fi} szóval végződik, és minimálisan a \texttt{then} utáni utasítások
+szükségesek, amelyek a feltétel teljesülése esetén futnak le. Gyakran ezt az
+ágat ``then-ágnak'' nevezzük.
+
+Amennyiben olyan utasításokat is meg szeretnénk adni, amelyek a feltétel vagy
+feltételek nem teljesülése esetén futnak le (amikor mindegyik hamis), akkor
+azokat az \texttt{else} kulcsszó után írhatjuk (``else-ág''):
+
+\begin{VerbExample}
+if feltétel
+then
+   utasítások      # ha a feltétel igaz
+else
+   utasítások      # ha a feltétel hamis
+fi
+\end{VerbExample}
+
+\noindent Gyakran további feltételeket is meg szeretnénk adni, ezért ezt a bash
+támogatja, nem szükséges a az \texttt{else} után újabb elágazást megadnunk,
+hanem az \texttt{elif} után további feltételeket adhatnunk meg. Ez az új
+feltétel implicit módon tartalmazza az összes korábbi tagadását, hiszen
+ellenkező esetben valamely korábbi ág futna le, nem pedig az ehhez az
+\texttt{elif}-hez tartozó ág. Egy \texttt{if} utasításban bárhány \texttt{elif}
+utáni feltétel lehet, de csak egyetlen \texttt{else} utáni ág, hiszen ez utóbbi
+fut le ``minden egyéb esetben'', amikor a feltételek nem teljesülnek.
+
+\begin{VerbExample}
+if feltétel1; then
+   utasítások1;
+elif feltétel2; then
+   utasítások2
+...
+elif feltételn; then
+   utasításokn
+else
+   utasítások
+fi
+\end{VerbExample}
+
+\noindent Tekintsünk egy egyszerű példát:
+
+\begin{VerbExample}
+if [[ $# -eq 0 ]]; then
+  echo Hiányzó paraméter! >&1
+  ecit 1
+elif [[ "X$1" = "X--help" ]]; then
+  echo Segítség!
+  exit 0
+elif [[ -d "$1" ]]; then
+  echo Ez könyvtár!
+  exit 2
+elif [[ -f "X$1" && -r "$1" ]]; then
+  cat $1
+fi 
+\end{VerbExample}
+
+\noindent A második ellenőrzés esetén szükséges az ``X'' beszúrása, ugyanis
+előfordulhat, hogy az első paraméter véletlenül épp a ``-f'' vagy a ``-d'',
+amelyek mindegyike feltételezi, hogy utána az összehasonlításban egyetlen dolog
+áll. A bash az ellenőrzést csak a változók behelyettesítése után végzi el,
+amikor már nem tud különbséget tenni, hogy az a bizonyos ``-f'' konkrétan honnan
+is származott: paraméterből, vagy a szkriptben eredetileg is benne volt.
+
+\subsection{A \texttt{case} utasítás}
+
+Az elágazás egy speciális esete a \texttt{case}, amikor valamilyen értéket
+hasonlítunk össze egy vagy több másikkal, és az első találathoz tartozó ág fut
+le. A lehetséges értékhalmaz programozási nyelv-függő, a shell esetén
+sztringeket jelent.
+
+Minden ághoz legalább egy lehetséges érték tartozik, és az utasításokat dupla
+pontosvessző (';;') zárja. A teljes elágazás végét a kezdő kulcsszó fordított
+irányú megadása (\texttt{esac}) jelzi.
+
+Tekintsünk rögtön egy példát, amelynél a paraméterek száma (sztringként
+kezelve!) a feltétel:
+
+\begin{VerbExample}
+case $# in
+0) echo egyetlen paraméter sincs;;
+1|2) echo kevesebb, mint 3 paraméter van;;
+3*) echo három, vagy harmincvalahány.... paraméter van;;
+6);; # nem csinál semmit itt
+*) echo minden más eset. Legalább 4 paraméter van, az első: "'$1'";;
+\end{VerbExample}
+
+A fenti példa az összes lehetséges alakot lefedi, a csillag bármilyen karakter
+nulla vagy több előfordulását jelzi, ahogy reguláris kifejezésekben a '.*'. A
+cső karakter ('|') az egyes eseteket választja el egymástól, ezáltal több ág is
+összevonható, egyszerre kezelhető.
+
+Az utolsó ág nem kötelező, azonban nagyon gyakran a csillag a feltétel, vagyis
+bármely egyéb, korábban fel nem sorolt esetben az itt megadott utasítások futnak
+le.
+
+A példában az első ág a '0' esetén fut le, a második az '1' és a '2' esetén, a
+harmadik pedig a '3' és a legalább kétjegyű, hárommal kezdődő számok esetén
+hajtódik végre. Bizonyos esetekben szükséges olyan ág is, amely nem csinál semmi
+mást, mint nem engedi ráfutni a vezérlést valamely későbbi ágra, ilyen most a
+negyedik, 6 paraméter esetén lefutó ág. Ezután van a minden fel nem sorolt
+esetet lefedő ág, amelyet a '*' jelez.
+
+\subsection{Egyéb változatok}
+
+Az \texttt{if} utasítás kiváltható egyszerűbb alakkal is, tipikusan akkor,
+amikor  csak a ``then-ág'' vagy csak az ``else-ág'' szükséges. Természetesen
+megoldható az is, hogy mindkettő szerepeljen, sőt, ezzel a változattal jóval
+bonyolultabb kifejezések is kényelmesen leírhatóak.
+
+A feltétel mindig valamely program státusza, melynek függvényében az utána lévő
+egyéb programok lefutnak. Ha a sikeres lefutás esetén kell egy másiknak is
+lefutnia, akkor köztük a  ``dupla és'' (\texttt{\&\&}) szerepel, ha pedig
+sikertelen esetben, akkor a  ``dupla vagy'' (\texttt{||}), végül státusztól
+függetlenül le kell futnia, akkor pontosvessző (azaz szekvenciáról van szó).
+
+A következő példában szerepelni fog a \texttt{true} parancs, melynek státusza
+mindig 0, azaz sikeresen lefut, továbbá a \texttt{false}, melyé nem nulla,
+vagyis mindig sikertelenül ér véget.
+
+\begin{VerbExample}
+false && true && echo a || echo b && echo c
+\end{VerbExample}
+
+\noindent A kimenete mindig a következő lesz:\\
+\ut{b}\\
+\ut{c}
+
+Ennek oka az, hogy a legelső utasítás státusza nem nulla, ezért a tőle
+\texttt{\&\&} karakterekkel elválasztott parancsok sem futhatnak, csak a
+\texttt{||} utáni rész, amelyből az első a ``b'' karaktert írja ki. Ez utóbbi
+nem jelez hibát, ezért az utána lévő utasítás is lefuthat, amely a
+``c'' karaktert írja ki.
+
+Tehát összefoglalva a kétféle jelölés:
+
+\begin{VerbExampleNum}
+utasítás1 && utasítás2
+utasítás3 || utasítás4
+\end{VerbExampleNum}
+
+\noindent Az első esetben amennyiben az \texttt{utasítás1} hiba nélkül végetért,
+lefut az \texttt{utasítás2} is, különben pedig nem. A (2) esetben pedig pont
+fortdítva, akkor fut le az \texttt{utasítás4}, hogyha az \texttt{utasítás3}
+hibát jelzett, azaz a státusza nem nulla.
+
+
+\section{Ciklusok}
+
+A legtöbb programozási nyelv -- így a szkriptnyelvek közé tartozó bash szkriptek
+is -- támogatják a ciklus használatát, amelyet általában \texttt{while}
+ciklusnak neveznek, valamint egyéb változatokat, amelyek a \texttt{while} és a
+további vezérlési szerkezetekkel is megadhatóak.
+
+A \texttt{while} ciklus egy feltételből és egy ciklusmagból áll, ez utóbbi
+pontosan egy -- esetleg összetett -- utasítást jelent. A ciklus mindaddig
+ismétli ezt az utasítást, amíg a feltétel teljesül, amely parancsfájlok esetén
+egy utasítás sikeres lefutását jelenti, amikor a státusza nulla.
+
+A ciklus státusza a magban legutoljára lefutott utasítás státusza lesz.
+
+Legalább négy sorból áll, ha pedig kevesebből, akkor a sorvége karakter helyett
+pontosvessző áll a részei között, akárcsak az elágazás esetén.
+
+\begin{VerbExample}
+while program
+do
+   utasítások
+done
+
+while program; do utasítások; done
+\end{VerbExample}
+
+\noindent Például végtelen ciklust ad a következő, amely pontosan ugyanazt
+teszi, mint a \texttt{yes} parancs:
+
+\begin{VerbExample}
+#!/bin/bash
+T=${1:-y}
+while :
+do
+   echo $T
+done
+\end{VerbExample}
+
+\noindent A ciklus felírható elágazás és ciklus segítéségével, amikor eggyel
+kevesebbszer fut le a ciklusmag, amennyiben legalábbis először igaz volt a
+feltétel -- a program hibamenentesen végetért. Ha az elágazás feltétele nem
+teljesült, akkor az else-ág tartalma az üres utasítás, a \textsc{skip}, amelyet
+ki sem írunk:
+
+\begin{VerbExample}
+if program ;
+then
+    utasítások
+    while program; do
+        utasítások
+    done
+fi
+\end{VerbExample}
+
+
+\subsection{A \texttt{for} ciklusok}
+
+Bár csupán a \texttt{while} segítségével is megoldható lenne bármely ciklust
+igénylő feladat, a gyakran előforduló egyéb alakokra van külön változat, a
+\texttt{for} ciklus. Sőt, ez utóbbinak is több variánsa van, az egyik egy lista
+elemeit járja végig, a másik pedig a C/C++ nyelveknél megszokott forma.
+
+A lista egymás után szereplő elemei egy, a ciklus definiálásakor megadott
+változóba kerülnek, majd pedig minden újabb elem esetén lefut a ciklusmag. Az
+alapértelmezett elválasztó karakterek a szóköz, a tabulátor valamint az újsor,
+ez azonban módosítható az \texttt{IFS} változó beállításával.
+
+\begin{VerbExample}
+# alapértelmezett értékkel:
+# IFS=$' \t\n'
+for i in első második harmadik
+do
+  echo $i
+done
+\end{VerbExample}
+
+\noindent A következő példa egy elsőre bonyolultnak tűnő feladatra ad egyszerű
+megoldást, nevezetesen, hogy bizonyos nevű fájl szerepel-e a \texttt{PATH}
+környezeti változóban megadott könyvtárakban (sh végződésű fájlok).
+
+\begin{VerbExample}
+IFS=:
+for dir in $PATH
+do
+  ls $dir | grep sh$ && echo $dir
+done
+\end{VerbExample}
+
+A \texttt{for} ciklus másik alakja a \texttt{while} ciklusra hasonlít, ugyanis
+van egy feltétele, azonban még két utasítás szerepel benne, amelyek a ciklus
+elidulása előtt illetve minden egyes iteráció (ciklusmag lefutás) után
+végrehajtódnak. Ez az alak a következő:
+
+\begin{VerbExample}
+for ((kif1 ; kif2 ; kif3 ))
+do
+   utasításlista
+done
+\end{VerbExample}
+
+\noindent Tehát a \texttt{kif1} kifejezés a ciklus elindulása előtt értékelődik
+ki (egy értékadás szokott lenni, például \texttt{i=0}), a \texttt{kif2}
+kifejezés a ciklus feltétele, amely minden egyes iteráció előtt kiértékelődik,
+ a \texttt{kif3} pedig az \texttt{utasításlista} után értékelődik ki (hajtódikk
+ végre). Erre példa az első 10 pozitív egész szám kiírása:
+
+\begin{VerbExample}
+for ((i=1; i<=10; ++i))
+do
+   echo $i
+done
+\end{VerbExample}
+
+\noindent A szerkezet azért is speciális, mivel a \$ jelet nem szükséges
+használni a dupla zárójelen belül, továbbá a kisebb-egyenlő reláció jele is a
+\verb|<=|, pedig bármely más környezetben ez az \texttt{=} nevű fájlból történő
+olvasás (átirányítás) lenne (illetve a \textless reláció sztringek közt, lásd
+\aref{table:vez-feltetelek}.\ táblázatot).
+
+Az előző átírható while ciklussá, kétféleképpen is, a második a hagyományos
+eszközökkel történő megadás, ami a régebbi shellekben is működne.
+
+\begin{VerbExample}
+((i=1))
+while ((i <= 10))
+do
+  echo $i
+  ((++i))
+done
+
+i=1
+while test $i -lt 10
+do
+  echo $i
+  i=$[ $i + 1]
+done
+\end{VerbExample}
+
+
+
+% Local Variables:
+% fill-column: 80
+% mode: latex
+% End:
+
