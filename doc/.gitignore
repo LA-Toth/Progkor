@@ -1,0 +1,17 @@
+# editor, etc.-related files:
+\#*
+*~
+*.orig
+*.rej
+*.swp
+*.swo
+
+# Output files:
+*.aux
+*.toc
+*.bbl
+*.blg
+*.log
+# 
+*.dvi
+*.pdf
