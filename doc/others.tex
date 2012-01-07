@@ -37,7 +37,8 @@ A \texttt{find} paranccsal kereshetünk egy adott könyvtárstruktúrában.
 
 \begin{VerbExample}
 find könyvtár feltételek
-find feltételek            # csak GNU find
+find feltételek            # csak GNU find, kerüljük, helyette inkább:
+find . feltételek
 \end{VerbExample}
 
 A \texttt{find} alapesetben az aktuális könyvtár alatt keres, ám megadható az
@@ -118,10 +119,12 @@ automatikus.
 
 A hatodik esetben a \texttt{find} parancs a szabványos kimenetre írja a
 megtalált fájlokat, melyet az \texttt{xargs} feldolgoz és az összeset egyszerre
-átadja az \texttt{rm}-nek. Hatása majdnem ugyanaz, mint a harmadik változaté,
-viszont ha túl sok a megtalált állomány, akkor a bash nem fogja tudni
-lefuttatni.
-
+átadja az \texttt{rm}-nek. Hatása majdnem ugyanaz, mint a harmadik változaté. A
+\texttt{find} használatakor nem is szükséges, más egyéb programok, szkriptek
+esetén hasznos. Van azonban egy nagy különbség a harmadik változathoz képest,
+nevezetesen az, hogy ha a megtalált állományok között van szóközt tartalmazó,
+akkor az \texttt{xargs} ott szétvágja, vagyis nem egy, hanem több paramétert ad
+át a mögötte álló programnak -- amely itt éppen az \texttt{rm}.
 
 
 
